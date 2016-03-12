@@ -52,8 +52,8 @@ mod tests {
     #[test]
     fn new_bit_code_from_random_bit_string() {
         let s = random_bit_string(256);
-        let bc = BitCode::from_str(&s, 13);
         println!("{:}", s);
+        let _ = BitCode::from_str(&s, 13);
     }
 
     #[test]

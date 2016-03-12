@@ -33,10 +33,11 @@ impl BitCodePool {
 mod tests {
     use bit_code::BitCode;
     use super::BitCodePool;
+    use test::Bencher;
     use utils::random_bit_string;
 
-    #[test]
-    fn new_bit_code_pool() {
+    #[bench]
+    fn new_bit_code_pool(b: &mut Bencher) {
         let mut bcp = BitCodePool::new();
         for _ in 0..1000 {
             let bit_string = random_bit_string(256);
@@ -44,9 +45,12 @@ mod tests {
             bcp.push(bit_code);
         }
 
-        for i in 0..bcp.codes.len() {
-            let needle = &bcp.codes[i];
-            bcp.search(needle, 5);
-        }
+        b.iter(
+            || {
+                for i in 0..bcp.codes.len() {
+                    let needle = &bcp.codes[i];
+                    bcp.search(needle, 5);
+                }
+            });
     }
 }
