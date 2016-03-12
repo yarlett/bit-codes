@@ -1,6 +1,9 @@
+use std::cmp::min;
+
+
 pub struct BitCode {
     code: Vec<u8>,
-    key: u64,
+    pub key: u64,
 }
 
 
@@ -19,19 +22,45 @@ impl BitCode {
         }
         BitCode{ code: code, key: key }
     }
+
+    // Returns Hamming distance between 2 BitCodes.
+    pub fn hamming_distance(&self, other: &BitCode) -> u32 {
+        let mut d: u32 = 0;
+        let n = min(self.code.len(), other.code.len());
+        for i in 0..n {
+            d += (self.code[i] ^ other.code[i]).count_ones()
+        }
+        d
+    }
 }
 
 
 #[cfg(test)]
 mod tests {
     use super::BitCode;
+    use utils::random_bit_string;
 
     #[test]
-    fn new_bit_code_from_str() {
+    fn new_bit_code_from_bit_string() {
         let bc = BitCode::from_str("010101010101", 13);
         assert_eq!(bc.code.len(), 2);
         assert_eq!(bc.code[0], 170);
         assert_eq!(bc.code[1], 10);
         assert_eq!(bc.key, 13);
+    }
+
+    #[test]
+    fn new_bit_code_from_random_bit_string() {
+        let s = random_bit_string(256);
+        let bc = BitCode::from_str(&s, 13);
+        println!("{:}", s);
+    }
+
+    #[test]
+    fn hamming_distance() {
+        let bc1 = BitCode::from_str("010101010101", 0);
+        assert_eq!(bc1.hamming_distance(&bc1), 0);
+        let bc2 = BitCode::from_str("101010101010", 0);
+        assert_eq!(bc1.hamming_distance(&bc2), 12);
     }
 }
