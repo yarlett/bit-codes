@@ -16,12 +16,12 @@ impl BitCodePool {
         self.codes.push(bit_code);
     }
 
-    pub fn search(&self, needle: &BitCode, radius: u32) -> Vec<u64> {
-        let mut keys: Vec<u64> = Vec::new();
-        for code in &self.codes {
-            let d = code.hamming_distance(&needle);
+    pub fn search(&self, needle: &BitCode, radius: usize) -> Vec<usize> {
+        let mut keys: Vec<usize> = Vec::new();
+        for i in 0..self.codes.len() {
+            let d = self.codes[i].hamming_distance(&needle);
             if d <= radius {
-                keys.push(code.key);
+                keys.push(i);
             }
         }
         keys
@@ -38,19 +38,28 @@ mod tests {
 
     #[bench]
     fn new_bit_code_pool(b: &mut Bencher) {
+        // Benchmark time to create a bit pool of 1M 256-bit codes.
+        b.iter(|| {
+            let mut bcp = BitCodePool::new();
+            for _ in 0..1_000_000 {
+                let bit_string = random_bit_string(256);
+                let bit_code = BitCode::from_str(&bit_string);
+                bcp.push(bit_code);
+            }
+        });
+    }
+
+    #[bench]
+    fn search_bit_code_pool(b: &mut Bencher) {
+        // Create a bit pool of 1M 256 bit codes.
         let mut bcp = BitCodePool::new();
-        for _ in 0..1000 {
+        for _ in 0..1_000_000 {
             let bit_string = random_bit_string(256);
-            let bit_code = BitCode::from_str(&bit_string, 0);
+            let bit_code = BitCode::from_str(&bit_string);
             bcp.push(bit_code);
         }
-
-        b.iter(
-            || {
-                for i in 0..bcp.codes.len() {
-                    let needle = &bcp.codes[i];
-                    bcp.search(needle, 5);
-                }
-            });
+        // Benchmark the time to search for a pattern.
+        let needle = &bcp.codes[0];
+        b.iter(|| { bcp.search(needle, 10); });
     }
 }

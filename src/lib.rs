@@ -5,4 +5,4 @@ extern crate test;
 
 pub mod bit_code;
 pub mod bit_code_pool;
-mod utils;
+pub mod utils;
