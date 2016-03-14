@@ -9,10 +9,9 @@ pub struct BitCode {
 impl BitCode {
     /*
     Create a BitCode from a string of binary digits.
-
     Raw data is stored as bits packed into as many u8s as are required.
     */
-    pub fn from_str(bit_string: &str) -> BitCode {
+    pub fn from_bit_string(bit_string: &str) -> BitCode {
         let mut bits: Vec<u64> = Vec::new();
         for (i, c) in bit_string.chars().enumerate() {
             let vector_pos = i / 64;
@@ -31,8 +30,7 @@ impl BitCode {
     */
     pub fn hamming_distance(&self, other: &BitCode) -> usize {
         let mut d: usize = 0;
-        let n = min(self.bits.len(), other.bits.len());
-        for i in 0..n {
+        for i in 0..min(self.bits.len(), other.bits.len()) {
             d += (self.bits[i] ^ other.bits[i]).count_ones() as usize;
         }
         d
@@ -47,23 +45,22 @@ mod tests {
 
     #[test]
     fn new_bit_code_from_bit_string() {
-        let bc = BitCode::from_str("010101010101");
+        let bc = BitCode::from_bit_string("010101010101");
         assert_eq!(bc.bits.len(), 1);
         assert_eq!(bc.bits[0], 2730);
     }
 
     #[test]
     fn new_bit_code_from_random_bit_string() {
-        let s = random_bit_string(256);
-        let bc = BitCode::from_str(&s);
+        let bc = BitCode::from_bit_string(&random_bit_string(256));
         assert_eq!(bc.bits.len(), 4);
     }
 
     #[test]
     fn hamming_distance() {
-        let bc1 = BitCode::from_str("010101010101");
+        let bc1 = BitCode::from_bit_string("010101010101");
         assert_eq!(bc1.hamming_distance(&bc1), 0);
-        let bc2 = BitCode::from_str("101010101010");
+        let bc2 = BitCode::from_bit_string("101010101010");
         assert_eq!(bc1.hamming_distance(&bc2), 12);
     }
 }
