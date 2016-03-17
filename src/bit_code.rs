@@ -25,6 +25,20 @@ impl BitCode {
         BitCode{ bits: bits }
     }
 
+    pub fn from_bit_vector(bit_vector: Vec<bool>) -> BitCode {
+        let mut bits: Vec<u64> = Vec::new();
+        for (i, b) in bit_vector.iter().enumerate() {
+            let vector_pos = i / 64;
+            let digit_pos = (i as u32) % 64u32;
+            let value = 2u64.pow(digit_pos);
+            if bits.len() <= vector_pos {
+                bits.push(0);
+            }
+            if *b { bits[vector_pos] += value; }
+        }
+        BitCode{ bits: bits }
+    }
+
     /*
     Returns the Hamming distance between 2 BitCodes.
     */
@@ -48,6 +62,23 @@ mod tests {
         let bc = BitCode::from_bit_string("010101010101");
         assert_eq!(bc.bits.len(), 1);
         assert_eq!(bc.bits[0], 2730);
+        assert_eq!(bc.hamming_distance(&bc), 0);
+    }
+
+    #[test]
+    fn new_bit_code_from_bit_vector() {
+        let bit_vector: Vec<bool> = vec![false, true, false, true, false, true, false, true, false, true, false, true];
+        let bc = BitCode::from_bit_vector(bit_vector);
+        assert_eq!(bc.bits.len(), 1);
+        assert_eq!(bc.bits[0], 2730);
+        assert_eq!(bc.hamming_distance(&bc), 0);
+    }
+
+    #[test]
+    fn bit_codes_are_equal() {
+        let bc1 = BitCode::from_bit_string("010101010101");
+        let bc2 = BitCode::from_bit_vector(vec![false, true, false, true, false, true, false, true, false, true, false, true]);
+        assert_eq!(bc1.hamming_distance(&bc2), 0);
     }
 
     #[test]
