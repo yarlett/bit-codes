@@ -13,3 +13,11 @@ pub fn random_bit_string(n: usize) -> String {
     }
     s
 }
+
+
+pub fn random_string(n: usize) -> String {
+    thread_rng()
+        .gen_ascii_chars()
+        .take(n)
+        .collect::<String>()
+}
