@@ -1,8 +1,8 @@
 use std::cmp::min;
 
-
+#[derive(Debug)]
 pub struct BitCode {
-    bits: Vec<u64>,
+    pub bits: Vec<u64>,
 }
 
 
