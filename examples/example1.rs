@@ -14,14 +14,11 @@ fn main() {
         Ok(file) => file,
     };
 
-    // Generate random projection vectors.
-    let random_projections = bit_codes::random_projections::get_random_projections(500, 256);
-
     let foo = BufReader::new(&file);
     for line in foo.lines() {
         let l = line.unwrap();
         println!("{}", &l);
-        let bc = bit_codes::encoders::string_to_bit_code(&l, &random_projections);
+        let bc = bit_codes::encoders::string_to_bit_code(&l, 256);
         println!("{:?}", bc);
     }
 

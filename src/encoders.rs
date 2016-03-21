@@ -6,7 +6,24 @@ use string_features::StringFeatures;
 
 
 /// Encodes an input string as a BitCode.
-pub fn string_to_bit_code(string: &str, random_projections: &Vec<Vec<f64>>) -> BitCode {
+///
+/// Bits are derived by aping features to specific bits via the hashing trick, and flipping bits everytime a feature is assigned to a bit.
+pub fn string_to_bit_code(string: &str, nbits: usize) -> BitCode {
+    let mut bit_vector: Vec<bool> = vec![false; nbits];
+    for feature in StringFeatures::new(&string) {
+        let mut hasher = SipHasher::new();
+        hasher.write(feature.as_bytes());
+        let hash_value = hasher.finish() as usize;
+        let bit_num = hash_value % nbits;
+        bit_vector[bit_num] = !bit_vector[bit_num];
+    }
+    // Create and return the BitCode.
+    BitCode::from_bit_vector(bit_vector)
+}
+
+
+/// Encodes an input string as a BitCode.
+pub fn string_to_bit_code_via_feature_vector(string: &str, random_projections: &Vec<Vec<f64>>) -> BitCode {
     // Infer dimensions from random projections.
     let nd = random_projections[0].len();
     let nb = random_projections.len();
@@ -51,30 +68,43 @@ pub fn string_to_feature_vector(string: &str, dim: usize) -> Vec<f64> {
 mod tests {
     use random_projections;
     use std::hash::{Hasher, SipHasher};
-    use super::{string_to_bit_code, string_to_feature_vector};
+    use super::{string_to_bit_code, string_to_bit_code_via_feature_vector, string_to_feature_vector};
     use test::Bencher;
     use utils::random_string;
 
+    /// Hashing a string on 2 occasions should give the same result.
     #[test]
     fn rehash_gives_same() {
-        let bytes: Vec<u8> = vec![12, 23, 34];
+        let string = "A random string.";
         let mut hasher = SipHasher::new();
-        hasher.write(&bytes);
+        hasher.write(string.as_bytes());
         let h1 = hasher.finish();
-        let mut hasher = SipHasher::new();
-        hasher.write(&bytes);
+        hasher = SipHasher::new();
+        hasher.write(string.as_bytes());
         let h2 = hasher.finish();
         assert_eq!(h1, h2);
     }
 
+    /// Deriving bit code from a string on 2 occasions should yield the same bit code.
     #[test]
     fn test_string_to_bit_code() {
+        let s = "Supercalifragilisticexpialidocious";
+        let bc1 = string_to_bit_code(&s, 512);
+        let bc2 = string_to_bit_code(&s, 512);
+        assert_eq!(bc1.hamming_distance(&bc2), 0);
+        println!("{:?}", bc1);
+        println!("{:?}", bc2);
+    }
+
+    /// Deriving bit code from a string on 2 occasions should yield the same bit code.
+    #[test]
+    fn test_string_to_bit_code_via_feature_vector() {
         let s = "Supercalifragilisticexpialidocious";
         let nd = 500;
         let nb = 256;
         let rps = random_projections::get_random_projections(nd, nb);
-        let bc1 = string_to_bit_code(s, &rps);
-        let bc2 = string_to_bit_code(s, &rps);
+        let bc1 = string_to_bit_code_via_feature_vector(s, &rps);
+        let bc2 = string_to_bit_code_via_feature_vector(s, &rps);
         assert_eq!(bc1.hamming_distance(&bc2), 0);
     }
 
@@ -91,11 +121,23 @@ mod tests {
     fn encode_string(b: &mut Bencher) {
         // Generate random string.
         let random_string = random_string(100);
+        // Benchmark time to encode the strings as bit codes.
+        b.iter(|| {
+            string_to_bit_code(&random_string, 256);
+        });
+    }
+
+    #[bench]
+    fn encode_string_via_feature_vector(b: &mut Bencher) {
+        // Generate random string.
+        let random_string = random_string(100);
         // Generate random projections vectors.
         let rps = random_projections::get_random_projections(500, 256);
         // Benchmark time to encode the strings as bit codes.
         b.iter(|| {
-            string_to_bit_code(&random_string, &rps);
+            string_to_bit_code_via_feature_vector(&random_string, &rps);
         });
     }
+
+
 }
