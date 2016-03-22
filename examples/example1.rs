@@ -17,9 +17,9 @@ fn main() {
     let foo = BufReader::new(&file);
     for line in foo.lines() {
         let l = line.unwrap();
-        println!("{}", &l);
+        // println!("{}", &l);
         let bc = bit_codes::encoders::string_to_bit_code(&l, 256);
-        println!("{:?}", bc);
+        // println!("{:?}", bc);
     }
 
 }

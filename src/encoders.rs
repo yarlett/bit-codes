@@ -5,16 +5,15 @@ use bit_code::BitCode;
 use string_features::StringFeatures;
 
 
-/// Encodes an input string as a BitCode.
+/// Encodes a string as a BitCode.
 ///
-/// Bits are derived by aping features to specific bits via the hashing trick, and flipping bits everytime a feature is assigned to a bit.
+/// Bits are derived by mapping features to specific bits via the hashing trick, and flipping bits everytime a feature is assigned to a bit. The upshot of this algorithm is that each bit in the bitcode indicates whether the number of string sub-features that were mapped to the bin corresponding to the bit via the hashing trick is odd or even.
 pub fn string_to_bit_code(string: &str, nbits: usize) -> BitCode {
     let mut bit_vector: Vec<bool> = vec![false; nbits];
-    for feature in StringFeatures::new(&string) {
+    for feature in StringFeatures::default(&string) {
         let mut hasher = SipHasher::new();
         hasher.write(feature.as_bytes());
-        let hash_value = hasher.finish() as usize;
-        let bit_num = hash_value % nbits;
+        let bit_num = (hasher.finish() as usize) % nbits;
         bit_vector[bit_num] = !bit_vector[bit_num];
     }
     // Create and return the BitCode.
@@ -48,7 +47,7 @@ pub fn string_to_bit_code_via_feature_vector(string: &str, random_projections: &
 /// Encodes an input string as a feature vector using the hashing trick.
 pub fn string_to_feature_vector(string: &str, dim: usize) -> Vec<f64> {
     let mut vector: Vec<f64> = vec![0.0; dim];
-    for feature in StringFeatures::new(&string) {
+    for feature in StringFeatures::default(&string) {
         let mut hasher = SipHasher::new();
         let bytes = feature.as_bytes();
         hasher.write(bytes);
