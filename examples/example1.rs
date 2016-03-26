@@ -19,7 +19,7 @@ fn main() {
         let l = line.unwrap();
         // println!("{}", &l);
         let bc = bit_codes::encoders::string_to_bit_code(&l, 256);
-        // println!("{:?}", bc);
+        println!("{:?}", bc);
     }
 
 }

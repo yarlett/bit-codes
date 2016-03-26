@@ -1,19 +1,13 @@
-use std::hash::{Hasher, SipHasher};
-
-
 use bit_code::BitCode;
 use string_features::StringFeatures;
 
-
 /// Encodes a string as a BitCode.
 ///
-/// Bits are derived by mapping features to specific bits via the hashing trick, and flipping bits everytime a feature is assigned to a bit. The upshot of this algorithm is that each bit in the bitcode indicates whether the number of string sub-features that were mapped to the bin corresponding to the bit via the hashing trick is odd or even.
+/// Bits are derived by mapping features to specific bits via the hashing trick, and flipping bits every time a feature is assigned to a bit. The upshot of this algorithm is that each bit in the bitcode indicates whether the number of string sub-features that were mapped to the bin corresponding to the bit via the hashing trick is odd or even.
 pub fn string_to_bit_code(string: &str, nbits: usize) -> BitCode {
     let mut bit_vector: Vec<bool> = vec![false; nbits];
-    for feature in StringFeatures::default(&string) {
-        let mut hasher = SipHasher::new();
-        hasher.write(feature.as_bytes());
-        let bit_num = (hasher.finish() as usize) % nbits;
+    for hash_value in StringFeatures::default(&string) {
+        let bit_num = hash_value % nbits;
         bit_vector[bit_num] = !bit_vector[bit_num];
     }
     // Create and return the BitCode.
@@ -47,12 +41,8 @@ pub fn string_to_bit_code_via_feature_vector(string: &str, random_projections: &
 /// Encodes an input string as a feature vector using the hashing trick.
 pub fn string_to_feature_vector(string: &str, dim: usize) -> Vec<f64> {
     let mut vector: Vec<f64> = vec![0.0; dim];
-    for feature in StringFeatures::default(&string) {
-        let mut hasher = SipHasher::new();
-        let bytes = feature.as_bytes();
-        hasher.write(bytes);
-        let hash_value = hasher.finish();
-        let vector_bin = (hash_value as usize) % (dim as usize);
+    for hash_value in StringFeatures::default(&string) {
+        let vector_bin = hash_value % dim;
         if (hash_value as i64) > 0 {
             vector[vector_bin] += 1.0;
         } else {
@@ -66,23 +56,10 @@ pub fn string_to_feature_vector(string: &str, dim: usize) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use random_projections;
-    use std::hash::{Hasher, SipHasher};
     use super::{string_to_bit_code, string_to_bit_code_via_feature_vector, string_to_feature_vector};
     use test::Bencher;
     use utils::random_string;
 
-    /// Hashing a string on 2 occasions should give the same result.
-    #[test]
-    fn rehash_gives_same() {
-        let string = "A random string.";
-        let mut hasher = SipHasher::new();
-        hasher.write(string.as_bytes());
-        let h1 = hasher.finish();
-        hasher = SipHasher::new();
-        hasher.write(string.as_bytes());
-        let h2 = hasher.finish();
-        assert_eq!(h1, h2);
-    }
 
     /// Deriving bit code from a string on 2 occasions should yield the same bit code.
     #[test]
@@ -122,7 +99,7 @@ mod tests {
         let random_string = random_string(100);
         // Benchmark time to encode the strings as bit codes.
         b.iter(|| {
-            string_to_bit_code(&random_string, 256);
+            string_to_bit_code(&random_string, 256)
         });
     }
 
@@ -134,9 +111,7 @@ mod tests {
         let rps = random_projections::get_random_projections(500, 256);
         // Benchmark time to encode the strings as bit codes.
         b.iter(|| {
-            string_to_bit_code_via_feature_vector(&random_string, &rps);
+            string_to_bit_code_via_feature_vector(&random_string, &rps)
         });
     }
-
-
 }

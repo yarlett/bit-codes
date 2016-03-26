@@ -43,25 +43,27 @@ mod tests {
     fn new_bit_code_pool(b: &mut Bencher) {
         // Benchmark time to create a bit pool of 1000 256-bit codes.
         b.iter(|| {
-            let mut bcp = BitCodePool::new();
+            let mut bit_code_pool = BitCodePool::new();
             for _ in 0..1_000 {
                 let bit_code = BitCode::from_bit_string(&random_bit_string(256));
-                bcp.push(bit_code);
+                bit_code_pool.push(bit_code);
             }
+            bit_code_pool
         });
     }
 
     #[bench]
-    fn search_bit_code_pool(b: &mut Bencher) {
+    fn search_bit_code_pool_1000_by_256(b: &mut Bencher) {
         // Create a bit pool of 1000 256 bit codes.
-        let mut bcp = BitCodePool::new();
+        let mut bit_code_pool = BitCodePool::new();
         for _ in 0..1_000 {
             let bit_string = random_bit_string(256);
             let bit_code = BitCode::from_bit_string(&bit_string);
-            bcp.push(bit_code);
+            bit_code_pool.push(bit_code);
         }
-        // Benchmark the time to search for a pattern.
-        let needle = &bcp.bit_codes[0];
-        b.iter(|| { bcp.search(needle, 10); });
+        //Select a needle to look for in the haystack.
+        let needle = &bit_code_pool.bit_codes[0];
+        // Benchmark the time to search for the needle.
+        b.iter(|| { bit_code_pool.search(needle, 10) });
     }
 }
