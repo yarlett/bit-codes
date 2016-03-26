@@ -40,7 +40,7 @@ mod tests {
     use utils::random_bit_string;
 
     #[bench]
-    fn new_bit_code_pool(b: &mut Bencher) {
+    fn new_bit_code_pool_1000_by_256(b: &mut Bencher) {
         // Benchmark time to create a bit pool of 1000 256-bit codes.
         b.iter(|| {
             let mut bit_code_pool = BitCodePool::new();
