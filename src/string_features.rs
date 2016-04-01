@@ -1,10 +1,13 @@
 use std::hash::{Hasher, SipHasher};
 
+use std::hash::Hash;
+
+
 /// Structure that can be iterated over to generate the sub-features of a string.
 ///
 /// The sub-features are character ngrams up to a maximum length. By exploding strings into a much larger number of sub-features in this way, non-identical but similar strings will end up overlapping in the sub-features they exhibit. Thus string similarity can be measured in terms of the overlapping sub-features.
-pub struct StringFeatures<'a> {
-    bytes: &'a [u8],
+pub struct StringFeatures {
+    chars: Vec<char>,
     position: usize,
     length_cur: usize,
     length_min: usize,
@@ -12,10 +15,13 @@ pub struct StringFeatures<'a> {
 }
 
 
-impl<'a> StringFeatures<'a> {
-    pub fn new(string: &str, length_min: usize, length_max: usize) -> StringFeatures {
+impl StringFeatures {
+    pub fn new(string: &str, ignore_case: bool, length_min: usize, length_max: usize) -> StringFeatures {
+        let chars: Vec<char>;
+        if ignore_case { chars = string.to_lowercase().chars().collect(); }
+        else { chars = string.chars().collect(); }
         StringFeatures{
-            bytes: string.as_bytes(),
+            chars: chars,
             position: 0,
             length_min: length_min,
             length_max: length_max,
@@ -24,8 +30,9 @@ impl<'a> StringFeatures<'a> {
     }
 
     pub fn default(string: &str) -> StringFeatures {
+        let chars: Vec<char> = string.to_lowercase().chars().collect();
         StringFeatures{
-            bytes: string.as_bytes(),
+            chars: chars,
             position: 0,
             length_min: 1,
             length_max: 10,
@@ -35,20 +42,22 @@ impl<'a> StringFeatures<'a> {
 }
 
 
-impl<'a> Iterator for StringFeatures<'a> {
+impl Iterator for StringFeatures {
     type Item = usize;
     fn next (&mut self) -> Option<usize> {
+        let n = self.chars.len();
         // Move to next position if 1) the current substring would exceed the bounds of the current string, or 2) the length of the current substring is greater than the maximum length.
-        if ((self.position + self.length_cur) > self.bytes.len()) || (self.length_cur > self.length_max) {
+        if ((self.position + self.length_cur) > n) || (self.length_cur > self.length_max) {
             self.position += 1;
             self.length_cur = self.length_min;
         }
         // Terminate the iteration when the position falls of the right of the string.
-        if self.position == self.bytes.len() { return None }
-        // Get the hash value of the currently defined substring.
-        let substring = &self.bytes[self.position..(self.position + self.length_cur)];
+        if self.position == n { return None }
+        // Get the sub-string of characters.
+        let subchars = &self.chars[self.position..(self.position + self.length_cur)];
+        // Compute the hash value of the sub-string.
         let mut hasher = SipHasher::new();
-        hasher.write(substring);
+        subchars.hash(&mut hasher);
         let hash_value = hasher.finish() as usize;
         // Move on to the next state and return the current substring.
         self.length_cur += 1;

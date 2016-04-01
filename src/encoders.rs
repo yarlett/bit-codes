@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn test_string_to_feature_vector() {
         let result = string_to_feature_vector("abcdef", 5);
-        let expected: Vec<f64> = vec![-1.0, -2.0, -2.0, 1.0, -3.0];
+        let expected: Vec<f64> = vec![3.0, 2.0, 0.0, 4.0, 4.0];
         for i in 0..result.len() {
             assert_eq!(result[i], expected[i]);
         }
