@@ -27,7 +27,7 @@ fn main() {
 }
 ```
 
-The resulting bit code will be represented by 8 64-bit unsigned integers:
+The resulting bit code will be represented by 4 64-bit unsigned integers:
 
 ```rust
 BitCode { blocks: [7362129119163033604, 18080254231187725207, 2073496217670817622, 15739700542835670175], nbits: 256 }
