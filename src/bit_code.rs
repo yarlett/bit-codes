@@ -2,50 +2,82 @@ use std::cmp::min;
 
 #[derive(Debug)]
 pub struct BitCode {
-    pub bits: Vec<u64>,
+    blocks: Vec<u64>,
+    nbits: usize,
 }
 
-
 impl BitCode {
-    /*
-    Create a BitCode from a string of binary digits.
-    Raw data is stored as bits packed into as many u8s as are required.
-    */
-    pub fn from_bit_string(bit_string: &str) -> BitCode {
-        let mut bits: Vec<u64> = Vec::new();
-        for (i, c) in bit_string.chars().enumerate() {
-            let vector_pos = i / 64;
-            let digit_pos = (i as u32) % 64u32;
-            let value = 2u64.pow(digit_pos);
-            if bits.len() <= vector_pos {
-                bits.push(0);
-            }
-            if c == '1' { bits[vector_pos] += value; }
-        }
-        BitCode{ bits: bits }
+
+    pub fn new(nbits: usize) -> Self {
+        let bit_blocks = ((nbits - 1) / 64) + 1;
+        BitCode{ blocks: vec![0; bit_blocks], nbits: nbits}
     }
 
-    pub fn from_bit_vector(bit_vector: Vec<bool>) -> BitCode {
-        let mut bits: Vec<u64> = Vec::new();
-        for (i, b) in bit_vector.iter().enumerate() {
-            let vector_pos = i / 64;
-            let digit_pos = (i as u32) % 64u32;
-            let value = 2u64.pow(digit_pos);
-            if bits.len() <= vector_pos {
-                bits.push(0);
-            }
-            if *b { bits[vector_pos] += value; }
+    pub fn from_bools(bools: &Vec<bool>) -> Self {
+        let bit_blocks = ((bools.len() - 1) / 64) + 1;
+        let mut bc = BitCode{ blocks: vec![0; bit_blocks], nbits: bools.len() };
+        for (i, b) in bools.iter().enumerate() {
+            bc.set(i, *b);
         }
-        BitCode{ bits: bits }
+        bc
     }
 
-    /*
-    Returns the Hamming distance between 2 BitCodes.
-    */
-    pub fn hamming_distance(&self, other: &BitCode) -> usize {
-        let mut d: usize = 0;
-        for i in 0..min(self.bits.len(), other.bits.len()) {
-            d += (self.bits[i] ^ other.bits[i]).count_ones() as usize;
+    pub fn from_string(string: &str) -> Self {
+        let mut bools: Vec<bool> = Vec::new();
+        for c in string.chars() {
+            if c == '1' { bools.push(true); }
+            else { bools.push(false); }
+        }
+        let bit_blocks = ((bools.len() - 1) / 64) + 1;
+        let mut bc = BitCode{ blocks: vec![0; bit_blocks], nbits: bools.len() };
+        for (i, b) in bools.iter().enumerate() {
+            bc.set(i, *b);
+        }
+        bc
+    }
+
+    #[inline]
+    pub fn get(&self, bit_number: usize) -> Option<bool> {
+        if bit_number >= self.nbits {
+            return None;
+        }
+        let block_num = bit_number / 64;
+        let block_pos = bit_number % 64;
+        return Some((self.blocks[block_num] & (1 << block_pos)) != 0)
+    }
+
+    pub fn len(&self) -> usize {
+        self.nbits
+    }
+
+    #[inline]
+    pub fn set(&mut self, bit_number: usize, value: bool) {
+        if bit_number < self.nbits {
+            let block_num = bit_number / 64;
+            let block_pos = bit_number % 64;
+            let flag = 1 << block_pos;
+            if value {
+                self.blocks[block_num] |= flag;
+            } else {
+                self.blocks[block_num] &= !flag;
+            }
+        }
+    }
+
+    #[inline]
+    pub fn count_ones(&self) -> u32 {
+        let mut o: u32 = 0;
+        for block in &self.blocks {
+            o += block.count_ones();
+        }
+        o
+    }
+
+    #[inline]
+    pub fn hamming_distance(&self, other: &BitCode) -> u32 {
+        let mut d: u32 = 0;
+        for i in 0..min(self.blocks.len(), other.blocks.len()) {
+            d += (self.blocks[i] ^ other.blocks[i]).count_ones();
         }
         d
     }
@@ -58,40 +90,48 @@ mod tests {
     use utils::random_bit_string;
 
     #[test]
-    fn new_bit_code_from_bit_string() {
-        let bc = BitCode::from_bit_string("010101010101");
-        assert_eq!(bc.bits.len(), 1);
-        assert_eq!(bc.bits[0], 2730);
+    fn new_bit_code_from_string() {
+        let bc = BitCode::from_string("010101010101");
+        assert_eq!(bc.len(), 12);
+        assert_eq!(bc.count_ones(), 6);
         assert_eq!(bc.hamming_distance(&bc), 0);
     }
 
     #[test]
-    fn new_bit_code_from_bit_vector() {
-        let bit_vector: Vec<bool> = vec![false, true, false, true, false, true, false, true, false, true, false, true];
-        let bc = BitCode::from_bit_vector(bit_vector);
-        assert_eq!(bc.bits.len(), 1);
-        assert_eq!(bc.bits[0], 2730);
+    fn new_bit_code_from_bools() {
+        let bools: Vec<bool> = vec![false, true, false, true, false, true, false, true, false, true, false, true];
+        let bc = BitCode::from_bools(&bools);
+        assert_eq!(bc.len(), 12);
+        assert_eq!(bc.count_ones(), 6);
+        for (i, b) in bools.iter().enumerate() {
+            match bc.get(i) {
+                Some(x) => assert_eq!(&x, b),
+                None => assert!(false),
+            }
+        }
         assert_eq!(bc.hamming_distance(&bc), 0);
     }
 
     #[test]
     fn bit_codes_are_equal() {
-        let bc1 = BitCode::from_bit_string("010101010101");
-        let bc2 = BitCode::from_bit_vector(vec![false, true, false, true, false, true, false, true, false, true, false, true]);
+        let bc1 = BitCode::from_string("010101010101");
+        let bc2 = BitCode::from_bools(&vec![false, true, false, true, false, true, false, true, false, true, false, true]);
         assert_eq!(bc1.hamming_distance(&bc2), 0);
     }
 
     #[test]
-    fn new_bit_code_from_random_bit_string() {
-        let bc = BitCode::from_bit_string(&random_bit_string(256));
-        assert_eq!(bc.bits.len(), 4);
+    fn new_bit_code_from_random_string() {
+        let bc = BitCode::from_string(&random_bit_string(256));
+        assert_eq!(bc.len(), 256);
     }
 
     #[test]
     fn hamming_distance() {
-        let bc1 = BitCode::from_bit_string("010101010101");
+        let bc1 = BitCode::from_string("010101010101");
         assert_eq!(bc1.hamming_distance(&bc1), 0);
-        let bc2 = BitCode::from_bit_string("101010101010");
+        let bc2 = BitCode::from_string("101010101010");
+        assert_eq!(bc1.hamming_distance(&bc1), 0);
+        assert_eq!(bc2.hamming_distance(&bc2), 0);
         assert_eq!(bc1.hamming_distance(&bc2), 12);
     }
 }

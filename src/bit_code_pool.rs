@@ -19,7 +19,7 @@ impl BitCodePool {
     /*
     Returns the indices of bit codes with Hamming distance <= radius from the needle.
     */
-    pub fn search(&self, needle: &BitCode, radius: usize) -> Vec<usize> {
+    pub fn search(&self, needle: &BitCode, radius: u32) -> Vec<usize> {
         let mut indices: Vec<usize> = Vec::new();
         for i in 0..self.bit_codes.len() {
             let d = self.bit_codes[i].hamming_distance(&needle);
@@ -45,7 +45,7 @@ mod tests {
         b.iter(|| {
             let mut bit_code_pool = BitCodePool::new();
             for _ in 0..1_000 {
-                let bit_code = BitCode::from_bit_string(&random_bit_string(256));
+                let bit_code = BitCode::from_string(&random_bit_string(256));
                 bit_code_pool.push(bit_code);
             }
             bit_code_pool
@@ -58,7 +58,7 @@ mod tests {
         let mut bit_code_pool = BitCodePool::new();
         for _ in 0..1_000 {
             let bit_string = random_bit_string(256);
-            let bit_code = BitCode::from_bit_string(&bit_string);
+            let bit_code = BitCode::from_string(&bit_string);
             bit_code_pool.push(bit_code);
         }
         //Select a needle to look for in the haystack.

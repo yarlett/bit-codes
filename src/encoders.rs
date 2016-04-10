@@ -11,7 +11,7 @@ pub fn string_to_bit_code(string: &str, nbits: usize) -> BitCode {
         bit_vector[bit_num] = !bit_vector[bit_num];
     }
     // Create and return the BitCode.
-    BitCode::from_bit_vector(bit_vector)
+    BitCode::from_bools(&bit_vector)
 }
 
 
@@ -34,7 +34,7 @@ pub fn string_to_bit_code_via_feature_vector(string: &str, random_projections: &
         }
     }
     // Create and return the BitCode.
-    BitCode::from_bit_vector(bit_vector)
+    BitCode::from_bools(&bit_vector)
 }
 
 
