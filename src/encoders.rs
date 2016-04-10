@@ -65,23 +65,23 @@ mod tests {
     #[test]
     fn test_string_to_bit_code() {
         let s = "Supercalifragilisticexpialidocious";
-        let bc1 = string_to_bit_code(&s, 512);
-        let bc2 = string_to_bit_code(&s, 512);
+        let bc1 = string_to_bit_code(&s, 256);
+        let bc2 = string_to_bit_code(&s, 256);
         assert_eq!(bc1.hamming_distance(&bc2), 0);
-        println!("{:?}", bc1);
-        println!("{:?}", bc2);
     }
 
     /// Deriving bit code from a string on 2 occasions should yield the same bit code.
     #[test]
     fn test_string_to_bit_code_via_feature_vector() {
-        let s = "Supercalifragilisticexpialidocious";
-        let nd = 500;
-        let nb = 256;
-        let rps = random_projections::get_random_projections(nd, nb);
-        let bc1 = string_to_bit_code_via_feature_vector(s, &rps);
-        let bc2 = string_to_bit_code_via_feature_vector(s, &rps);
-        assert_eq!(bc1.hamming_distance(&bc2), 0);
+        let string = "Supercalifragilisticexpialidocious";
+        let num_features = 500;
+        let num_bits = 256;
+        let random_projs = random_projections::get_random_projections(num_features, num_bits);
+        let bit_code_1 = string_to_bit_code_via_feature_vector(&string, &random_projs);
+        let bit_code_2 = string_to_bit_code_via_feature_vector(&string, &random_projs);
+        println!("{:?}", bit_code_1);
+        println!("{:?}", bit_code_2);
+        assert_eq!(bit_code_1.hamming_distance(&bit_code_2), 0);
     }
 
     #[test]

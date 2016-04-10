@@ -19,7 +19,10 @@ extern crate bit_codes;
 
 fn main() {
     let string = "Supercalifragilisticexpialidocious";
-    let bit_code = bit_codes::encoders::string_to_bit_code(&string, 256);
+    let num_features = 500;
+    let num_bits = 256;
+    let random_projs = random_projections::get_random_projections(num_features, num_bits);
+    let bit_code = string_to_bit_code_via_feature_vector(&string, &random_projs);
     println!("{:?}", bit_code);
 }
 ```
@@ -27,5 +30,5 @@ fn main() {
 The resulting bit code will be represented by 8 64-bit unsigned integers:
 
 ```rust
-BitCode { bits: [14000574154928604236, 11245490571650794884, 4755917823455318528, 9374288125322592512, 9549040785006003238, 12742482636564341120, 10056538079608504352, 355241063104522] }
+BitCode { blocks: [7362129119163033604, 18080254231187725207, 2073496217670817622, 15739700542835670175], nbits: 256 }
 ```
