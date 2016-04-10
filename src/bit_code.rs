@@ -124,6 +124,21 @@ mod tests {
     use utils::random_bit_string;
 
     #[test]
+    fn set_get() {
+        let mut bc = BitCode::new(100);
+        assert_eq!(bc.len(), 100);
+        assert_eq!(bc.count_ones(), 0);
+        bc.set(10, true);
+        bc.set(20, true);
+        bc.set(30, true);
+        assert_eq!(bc.count_ones(), 3);
+        assert_eq!(bc.get(10), Some(true));
+        bc.set(10, false);
+        assert_eq!(bc.get(10), Some(false));
+        assert_eq!(bc.count_ones(), 2);
+    }
+
+    #[test]
     fn multi_index_keys() {
         let bc = BitCode::from_string("010101010101");
         let keys = bc.multi_index_keys(4);
