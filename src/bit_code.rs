@@ -43,11 +43,45 @@ impl BitCode {
         }
         let block_num = bit_number / 64;
         let block_pos = bit_number % 64;
-        return Some((self.blocks[block_num] & (1 << block_pos)) != 0)
+        Some((self.blocks[block_num] & (1 << block_pos)) != 0)
     }
 
+    #[inline]
+    pub fn get_block(&self, block_number: usize) -> Option<u64> {
+        if block_number >= self.blocks.len() {
+            return None;
+        }
+        Some(self.blocks[block_number])
+    }
+
+    #[inline]
     pub fn len(&self) -> usize {
         self.nbits
+    }
+
+    pub fn multi_index_keys(&self, mut nbits: usize) -> Vec<u64> {
+        // Make sure size of bitmask is acceptable.
+        if ((64 % nbits) != 0) || (nbits > 64) {
+            nbits = 8;
+        }
+        // Get masks to be applied to each block.
+        let mut masks: Vec<u64> = Vec::new();
+        for i in 0..(64 / nbits) {
+            let mut mask: u64 = 0;
+            for j in 0..nbits {
+                let bit_index = i * nbits + j;
+                mask |= 1 << bit_index;
+            }
+            masks.push(mask);
+        }
+        // Get index keys by applying masks to each block.
+        let mut keys: Vec<u64> = Vec::new();
+        for block in &self.blocks {
+            for mask in &masks {
+                keys.push(block & mask);
+            }
+        }
+        keys
     }
 
     #[inline]
@@ -90,10 +124,18 @@ mod tests {
     use utils::random_bit_string;
 
     #[test]
+    fn multi_index_keys() {
+        let bc = BitCode::from_string("010101010101");
+        let keys = bc.multi_index_keys(4);
+        assert_eq!(keys.len(), 16);
+    }
+
+    #[test]
     fn new_bit_code_from_string() {
         let bc = BitCode::from_string("010101010101");
         assert_eq!(bc.len(), 12);
         assert_eq!(bc.count_ones(), 6);
+        assert_eq!(bc.get_block(0), Some(2730));
         assert_eq!(bc.hamming_distance(&bc), 0);
     }
 
@@ -103,6 +145,7 @@ mod tests {
         let bc = BitCode::from_bools(&bools);
         assert_eq!(bc.len(), 12);
         assert_eq!(bc.count_ones(), 6);
+        assert_eq!(bc.get_block(0), Some(2730));
         for (i, b) in bools.iter().enumerate() {
             match bc.get(i) {
                 Some(x) => assert_eq!(&x, b),
