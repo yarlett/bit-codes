@@ -1,21 +1,22 @@
 use std::cmp::min;
 
+
 #[derive(Debug)]
 pub struct BitCode {
-    blocks: Vec<u64>,
-    nbits: usize,
+    blocks: Vec<u64>, // Blocks of u64s to store bits.
 }
+
 
 impl BitCode {
 
-    pub fn new(nbits: usize) -> Self {
-        let bit_blocks = ((nbits - 1) / 64) + 1;
-        BitCode{ blocks: vec![0; bit_blocks], nbits: nbits}
+    pub fn new(num_bits: usize) -> Self {
+        let num_blocks = ((num_bits - 1) / 64) + 1;
+        BitCode{ blocks: vec![0; num_blocks] }
     }
 
     pub fn from_bools(bools: &Vec<bool>) -> Self {
         let bit_blocks = ((bools.len() - 1) / 64) + 1;
-        let mut bc = BitCode{ blocks: vec![0; bit_blocks], nbits: bools.len() };
+        let mut bc = BitCode{ blocks: vec![0; bit_blocks] };
         for (i, b) in bools.iter().enumerate() {
             bc.set(i, *b);
         }
@@ -29,7 +30,7 @@ impl BitCode {
             else { bools.push(false); }
         }
         let bit_blocks = ((bools.len() - 1) / 64) + 1;
-        let mut bc = BitCode{ blocks: vec![0; bit_blocks], nbits: bools.len() };
+        let mut bc = BitCode{ blocks: vec![0; bit_blocks] };
         for (i, b) in bools.iter().enumerate() {
             bc.set(i, *b);
         }
@@ -38,7 +39,7 @@ impl BitCode {
 
     #[inline]
     pub fn get(&self, bit_number: usize) -> Option<bool> {
-        if bit_number >= self.nbits {
+        if bit_number >= self.num_bits() {
             return None;
         }
         let block_num = bit_number / 64;
@@ -48,28 +49,23 @@ impl BitCode {
 
     #[inline]
     pub fn get_block(&self, block_number: usize) -> Option<u64> {
-        if block_number >= self.blocks.len() {
+        if block_number >= self.num_blocks() {
             return None;
         }
         Some(self.blocks[block_number])
     }
 
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.nbits
-    }
-
-    pub fn multi_index_keys(&self, mut nbits: usize) -> Vec<u64> {
-        // Make sure size of bitmask is acceptable.
-        if ((64 % nbits) != 0) || (nbits > 64) {
-            nbits = 8;
+    pub fn multi_index_values(&self, mut bits_per_index: usize) -> Vec<u64> {
+        // Ensure bit_per_index is acceptable.
+        if (bits_per_index < 2) || (bits_per_index > 64) || ((64 % bits_per_index) != 0) {
+            bits_per_index = self.bits_per_index_ideal();
         }
         // Get masks to be applied to each block.
         let mut masks: Vec<u64> = Vec::new();
-        for i in 0..(64 / nbits) {
+        for i in 0..(64 / bits_per_index) {
             let mut mask: u64 = 0;
-            for j in 0..nbits {
-                let bit_index = i * nbits + j;
+            for j in 0..bits_per_index {
+                let bit_index = i * bits_per_index + j;
                 mask |= 1 << bit_index;
             }
             masks.push(mask);
@@ -85,8 +81,36 @@ impl BitCode {
     }
 
     #[inline]
+    pub fn num_bits(&self) -> usize {
+        self.blocks.len() * 64
+    }
+
+    #[inline]
+    pub fn num_blocks(&self) -> usize {
+        self.blocks.len()
+    }
+
+    #[inline]
+    pub fn bits_per_index_ideal(&self) -> usize {
+        let mut bits_per_index = (self.num_bits() as f64).log2().floor() as usize;
+        loop {
+            if (64 % bits_per_index) == 0 {
+                break;
+            }
+            bits_per_index += 1;
+        }
+        if bits_per_index < 2 {
+            bits_per_index = 2;
+        }
+        if bits_per_index > 64 {
+            bits_per_index = 64;
+        }
+        bits_per_index
+    }
+
+    #[inline]
     pub fn set(&mut self, bit_number: usize, value: bool) {
-        if bit_number < self.nbits {
+        if bit_number < self.num_bits() {
             let block_num = bit_number / 64;
             let block_pos = bit_number % 64;
             let flag = 1 << block_pos;
@@ -123,10 +147,12 @@ mod tests {
     use super::BitCode;
     use utils::random_bit_string;
 
+
     #[test]
     fn set_get() {
-        let mut bc = BitCode::new(100);
-        assert_eq!(bc.len(), 100);
+        let mut bc = BitCode::new(512);
+        assert_eq!(bc.num_bits(), 512);
+        assert_eq!(bc.num_blocks(), 8);
         assert_eq!(bc.count_ones(), 0);
         bc.set(10, true);
         bc.set(20, true);
@@ -139,16 +165,17 @@ mod tests {
     }
 
     #[test]
-    fn multi_index_keys() {
+    fn multi_index_values() {
         let bc = BitCode::from_string("010101010101");
-        let keys = bc.multi_index_keys(4);
+        let keys = bc.multi_index_values(4);
         assert_eq!(keys.len(), 16);
     }
 
     #[test]
     fn new_bit_code_from_string() {
         let bc = BitCode::from_string("010101010101");
-        assert_eq!(bc.len(), 12);
+        assert_eq!(bc.num_bits(), 64);
+        assert_eq!(bc.num_blocks(), 1);
         assert_eq!(bc.count_ones(), 6);
         assert_eq!(bc.get_block(0), Some(2730));
         assert_eq!(bc.hamming_distance(&bc), 0);
@@ -158,7 +185,8 @@ mod tests {
     fn new_bit_code_from_bools() {
         let bools: Vec<bool> = vec![false, true, false, true, false, true, false, true, false, true, false, true];
         let bc = BitCode::from_bools(&bools);
-        assert_eq!(bc.len(), 12);
+        assert_eq!(bc.num_bits(), 64);
+        assert_eq!(bc.num_blocks(), 1);
         assert_eq!(bc.count_ones(), 6);
         assert_eq!(bc.get_block(0), Some(2730));
         for (i, b) in bools.iter().enumerate() {
@@ -180,7 +208,7 @@ mod tests {
     #[test]
     fn new_bit_code_from_random_string() {
         let bc = BitCode::from_string(&random_bit_string(256));
-        assert_eq!(bc.len(), 256);
+        assert_eq!(bc.num_bits(), 256);
     }
 
     #[test]

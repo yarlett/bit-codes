@@ -4,7 +4,7 @@ use bit_code_index::BitCodeIndex;
 
 pub struct BitCodePool {
     bit_codes: Vec<BitCode>,       // Bit codes in the pool.
-    bit_length: usize,             // Length of bit codes in the pool.
+    bit_length: usize,             // Length of the bit codes.
     ids: Vec<u64>,                 // Identifiers associated with bit codes (e.g. primary keys in database representation).
     index: Option<BitCodeIndex>,   // Optional multiindex to power sublinear time searching.
 }
@@ -12,36 +12,34 @@ pub struct BitCodePool {
 
 impl BitCodePool {
     pub fn new(bit_length: usize) -> Self {
-        let bit_codes = Vec::new();
-        let ids = Vec::new();
+        // TODO: Ensure bit_length is an exact multiple of 64?
+        // TODO: Store IDs in BitCodes themselves?
+        // TODO: Configure a BitCodePool with random projections?
         BitCodePool {
-            bit_codes: bit_codes,
+            bit_codes: Vec::new(),
             bit_length: bit_length,
-            ids: ids,
+            ids: Vec::new(),
             index: None,
         }
     }
 
+    // TODO: Ensure that all bit codes in the pool have the same bit_length? Do this by taking strings in here and mapping them to a common bit code format using random projections.
     pub fn add(&mut self, bit_code: BitCode, id: u64) {
         self.bit_codes.push(bit_code);
         self.ids.push(id);
     }
 
-    pub fn index(&mut self, mut bit_length: usize) {
-        // Ensure index bit length is less than block size and divides block size exactly.
-        if (bit_length == 0) || (bit_length > 64) || ((64 % bit_length) != 0) {
-            bit_length = 8;
-        }
+    // Set multi-index on the bit codes currently in the pool.
+    // TODO: Figure out a way to expire the index when new bit codes added?
+    pub fn index(&mut self, mut bits_per_index: usize) {
         // Number of hash indexes needed by multi-index.
         let num_blocks = (self.bit_length) / 64;
-        let num_indexes = num_blocks * (64 / bit_length);
+        let num_indexes = num_blocks * (64 / bits_per_index);
         // Create the index.
         let index = BitCodeIndex::new(num_indexes);
-
         for bit_code in &self.bit_codes {
-            let keys = bit_code.multi_index_keys(bit_length);
+            let keys = bit_code.multi_index_values(bits_per_index);
         }
-
         self.index = Some(index);
     }
 

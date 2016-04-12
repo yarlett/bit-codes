@@ -1,6 +1,8 @@
 use std::hash::{Hasher, SipHasher};
-
 use std::hash::Hash;
+
+
+// TODO: Look into string kernels here to see if there's a more general framework that can be used to iterate over the features of strings.
 
 
 /// Structure that can be iterated over to generate the sub-features of a string.
