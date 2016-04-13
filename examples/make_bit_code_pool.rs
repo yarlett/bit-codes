@@ -10,6 +10,5 @@ fn main() {
     }
     // Index the bit pool using multi-index hashing.
     bit_code_pool.index();
-
     println!("{:?}", bit_code_pool.index_show());
 }

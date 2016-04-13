@@ -84,19 +84,18 @@ impl BitCodePool {
 
 #[cfg(test)]
 mod tests {
-    use bit_code::BitCode;
     use super::BitCodePool;
     use test::Bencher;
-    use utils::random_bit_string;
+    use utils::random_string;
 
     #[bench]
     fn new_bit_code_pool_1000_by_256(b: &mut Bencher) {
         // Benchmark time to create a bit pool of 1000 256-bit codes.
         b.iter(|| {
-            let mut bit_code_pool = BitCodePool::new(256);
+            let mut bit_code_pool = BitCodePool::new(256, 1000);
             for id in 0..1_000 {
-                let bit_code = BitCode::from_string(&random_bit_string(256));
-                bit_code_pool.add(bit_code, id);
+                let string = random_string(100);
+                bit_code_pool.add(&string, id);
             }
             bit_code_pool
         });
@@ -105,11 +104,10 @@ mod tests {
     #[bench]
     fn search_bit_code_pool_1000_by_256(b: &mut Bencher) {
         // Create a bit pool of 1000 256 bit codes.
-        let mut bit_code_pool = BitCodePool::new(256);
+        let mut bit_code_pool = BitCodePool::new(256, 1000);
         for id in 0..1_000 {
-            let bit_string = random_bit_string(256);
-            let bit_code = BitCode::from_string(&bit_string);
-            bit_code_pool.add(bit_code, id);
+            let string = random_string(100);
+            bit_code_pool.add(&string, id);
         }
         //Select a needle to look for in the haystack.
         let needle = &bit_code_pool.bit_codes[0];
