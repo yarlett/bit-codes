@@ -1,46 +1,66 @@
 use bit_code::BitCode;
 use bit_code_index::BitCodeIndex;
+use encoders::string_to_bit_code_via_feature_vector;
+use random_projections::get_random_projections;
 
 
+#[derive(Debug)]
 pub struct BitCodePool {
     bit_codes: Vec<BitCode>,       // Bit codes in the pool.
     bit_length: usize,             // Length of the bit codes.
     ids: Vec<u64>,                 // Identifiers associated with bit codes (e.g. primary keys in database representation).
     index: Option<BitCodeIndex>,   // Optional multiindex to power sublinear time searching.
+    random_projections: Vec<Vec<f64>>,
 }
 
 
 impl BitCodePool {
-    pub fn new(bit_length: usize) -> Self {
-        // TODO: Ensure bit_length is an exact multiple of 64?
+    pub fn new(mut bit_length: usize, features: usize) -> Self {
+        // Bit length must be an exact multiple of 64 to fit block size.
+        if (bit_length % 64) != 0 {
+            bit_length = (bit_length / 64) + 1;
+        }
+        if bit_length == 0 {
+            bit_length = 64;
+        }
+        // Generate the random projections required.
+        let random_projections = get_random_projections(features, bit_length);
         // TODO: Store IDs in BitCodes themselves?
-        // TODO: Configure a BitCodePool with random projections?
         BitCodePool {
             bit_codes: Vec::new(),
             bit_length: bit_length,
             ids: Vec::new(),
             index: None,
+            random_projections: random_projections,
         }
     }
 
-    // TODO: Ensure that all bit codes in the pool have the same bit_length? Do this by taking strings in here and mapping them to a common bit code format using random projections.
-    pub fn add(&mut self, bit_code: BitCode, id: u64) {
+    // Add a bit code to the pool created from a string.
+    pub fn add(&mut self, string: &str, id: u64) {
+        let bit_code = string_to_bit_code_via_feature_vector(&string, &self.random_projections);
         self.bit_codes.push(bit_code);
         self.ids.push(id);
     }
 
-    // Set multi-index on the bit codes currently in the pool.
     // TODO: Figure out a way to expire the index when new bit codes added?
-    pub fn index(&mut self, mut bits_per_index: usize) {
+    // Set multi-index on the bit codes currently in the pool.
+    pub fn index(&mut self) {
+        let bits_per_index = (self.bit_length as f64).log2() as usize;
         // Number of hash indexes needed by multi-index.
         let num_blocks = (self.bit_length) / 64;
         let num_indexes = num_blocks * (64 / bits_per_index);
+        println!("num_indexes={:}", num_indexes);
         // Create the index.
-        let index = BitCodeIndex::new(num_indexes);
-        for bit_code in &self.bit_codes {
-            let keys = bit_code.multi_index_values(bits_per_index);
+        let mut index = BitCodeIndex::new(num_indexes);
+        for (i, bit_code) in self.bit_codes.iter().enumerate() {
+            let index_values = bit_code.multi_index_values(bits_per_index);
+            index.add(&index_values, i);
         }
         self.index = Some(index);
+    }
+
+    pub fn index_show(self) {
+        println!("{:?}", self.index);
     }
 
     /// Returns the ids of bit codes with Hamming distance <= radius from the needle.
@@ -55,10 +75,10 @@ impl BitCodePool {
         ids
     }
 
-    pub fn search_with_index(&self, needle: &BitCode, radius: u32) -> Vec<u64> {
-        let mut ids: Vec<u64> = Vec::new();
-        ids
-    }
+    // pub fn search_with_index(&self, needle: &BitCode, radius: u32) -> Vec<u64> {
+    //     let mut ids: Vec<u64> = Vec::new();
+    //     ids
+    // }
 }
 
 

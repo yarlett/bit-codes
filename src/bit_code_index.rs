@@ -1,23 +1,33 @@
-use bit_code::BitCode;
+// use bit_code::BitCode;
 use std::collections::HashMap;
 
 
+#[derive(Debug)]
 pub struct BitCodeIndex {
-    num_indexes: usize,
-    hashes: Vec<HashMap<u64, Vec<u64>>>,
+    indexes: Vec<HashMap<u64, Vec<usize>>>,
 }
 
 
 impl BitCodeIndex {
     pub fn new(num_indexes: usize) -> Self {
-        BitCodeIndex{
-            hashes: Vec::new(),
-            num_indexes: num_indexes,
+        let mut indexes: Vec<HashMap<u64, Vec<usize>>> = Vec::with_capacity(num_indexes);
+        for _ in 0..num_indexes {
+            indexes.push(HashMap::new());
+        }
+        BitCodeIndex {
+            indexes: indexes,
         }
     }
 
-    // pub fn add(bit_code: BitCode) {
-    //     for v in bit_code.multi_index_values() {
-    //     }
-    // }
+    pub fn add(&mut self, keys: &Vec<u64>, value: usize) {
+        for (i, k) in keys.iter().enumerate() {
+            if !self.indexes[i].contains_key(k) {
+                self.indexes[i].insert(*k, Vec::new());
+            }
+            match self.indexes[i].get_mut(k) {
+                Some(x) => x.push(value),
+                None => (),
+            }
+        }
+    }
 }
