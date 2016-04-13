@@ -38,7 +38,7 @@ BitCode { blocks: [7362129119163033604, 18080254231187725207, 207349621767081762
 
 For most applications the primary data structure exposed by the library is the BitCodePool. A BitCodePool allows compact bit codes to be derived from string representations and stored in the pool so that they can subsequently be queried and retrieved.
 
-The following example shows how a BitCodePool can be created; how bit codes can be added to the pool based on arbitrary string representations; and how a multi-index can be created for codes in the pool. [See](http://arxiv.org/pdf/1307.2982.pdf) for further information about the type of index used.
+The following example shows how a BitCodePool can be created; how bit codes can be added to the pool based on arbitrary string representations; and how a multi-index can be created for codes in the pool. See [here](http://arxiv.org/pdf/1307.2982.pdf) for further information about the type of index used.
 
 ```rust
 extern crate bit_codes;
