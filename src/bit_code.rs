@@ -56,28 +56,20 @@ impl BitCode {
     }
 
     pub fn multi_index_values(&self, mut bits_per_index: usize) -> Vec<u64> {
-        // Ensure bit_per_index is acceptable.
-        if (bits_per_index < 2) || (bits_per_index > 64) || ((64 % bits_per_index) != 0) {
-            bits_per_index = self.bits_per_index_ideal();
+        // Bits per index must be within range of block size.
+        if bits_per_index < 1 { bits_per_index = 1 };
+        if bits_per_index > 64 { bits_per_index = 64 };
+        // Calculate number of indexes.
+        let n = self.num_bits();
+        let num_indexes = n / bits_per_index;
+        // Iterate over bits setting index values.
+        let mut index_values: Vec<u64> = vec![0; num_indexes];
+        for i in 0..n {
+            let index_num = i / bits_per_index;
+            let position_num = i % bits_per_index;
+            if self.get(i).unwrap() { index_values[index_num] |= 1 << position_num } ;
         }
-        // Get masks to be applied to each block.
-        let mut masks: Vec<u64> = Vec::new();
-        for i in 0..(64 / bits_per_index) {
-            let mut mask: u64 = 0;
-            for j in 0..bits_per_index {
-                let bit_index = i * bits_per_index + j;
-                mask |= 1 << bit_index;
-            }
-            masks.push(mask);
-        }
-        // Get index keys by applying masks to each block.
-        let mut keys: Vec<u64> = Vec::new();
-        for block in &self.blocks {
-            for mask in &masks {
-                keys.push(block & mask);
-            }
-        }
-        keys
+        index_values
     }
 
     #[inline]
@@ -88,24 +80,6 @@ impl BitCode {
     #[inline]
     pub fn num_blocks(&self) -> usize {
         self.blocks.len()
-    }
-
-    #[inline]
-    pub fn bits_per_index_ideal(&self) -> usize {
-        let mut bits_per_index = (self.num_bits() as f64).log2().floor() as usize;
-        loop {
-            if (64 % bits_per_index) == 0 {
-                break;
-            }
-            bits_per_index += 1;
-        }
-        if bits_per_index < 2 {
-            bits_per_index = 2;
-        }
-        if bits_per_index > 64 {
-            bits_per_index = 64;
-        }
-        bits_per_index
     }
 
     #[inline]
