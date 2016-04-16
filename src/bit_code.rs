@@ -3,20 +3,19 @@ use std::cmp::min;
 
 #[derive(Debug)]
 pub struct BitCode {
-    blocks: Vec<u64>, // Blocks of u64s to store bits.
+    blocks: Vec<u64>, // Vec of u64s to store bits.
 }
 
 
 impl BitCode {
 
     pub fn new(num_bits: usize) -> Self {
-        let num_blocks = ((num_bits - 1) / 64) + 1;
-        BitCode{ blocks: vec![0; num_blocks] }
+        BitCode{ blocks: vec![0; num_blocks_needed(num_bits)] }
     }
 
     pub fn from_bools(bools: &Vec<bool>) -> Self {
-        let bit_blocks = ((bools.len() - 1) / 64) + 1;
-        let mut bc = BitCode{ blocks: vec![0; bit_blocks] };
+        let num_blocks = num_blocks_needed(bools.len());
+        let mut bc = BitCode{ blocks: vec![0; num_blocks] };
         for (i, b) in bools.iter().enumerate() {
             bc.set(i, *b);
         }
@@ -26,33 +25,48 @@ impl BitCode {
     pub fn from_string(string: &str) -> Self {
         let mut bools: Vec<bool> = Vec::new();
         for c in string.chars() {
-            if c == '1' { bools.push(true); }
-            else { bools.push(false); }
+            if c == '1' { bools.push(true); } else { bools.push(false); };
         }
-        let bit_blocks = ((bools.len() - 1) / 64) + 1;
-        let mut bc = BitCode{ blocks: vec![0; bit_blocks] };
+        let num_blocks = num_blocks_needed(bools.len());
+        let mut bc = BitCode{ blocks: vec![0; num_blocks] };
         for (i, b) in bools.iter().enumerate() {
             bc.set(i, *b);
         }
         bc
     }
 
+    // Methods.
+
+    #[inline]
+    pub fn count_ones(&self) -> u32 {
+        let mut o: u32 = 0;
+        for block in &self.blocks {
+            o += block.count_ones();
+        }
+        o
+    }
+
     #[inline]
     pub fn get(&self, bit_number: usize) -> Option<bool> {
-        if bit_number >= self.num_bits() {
-            return None;
-        }
         let block_num = bit_number / 64;
+        if block_num > self.blocks.len() { return None; }
         let block_pos = bit_number % 64;
         Some((self.blocks[block_num] & (1 << block_pos)) != 0)
     }
 
     #[inline]
     pub fn get_block(&self, block_number: usize) -> Option<u64> {
-        if block_number >= self.num_blocks() {
-            return None;
-        }
+        if block_number >= self.blocks.len() { return None; }
         Some(self.blocks[block_number])
+    }
+
+    #[inline]
+    pub fn hamming_distance(&self, other: &BitCode) -> u32 {
+        let mut d: u32 = 0;
+        for i in 0..min(self.blocks.len(), other.blocks.len()) {
+            d += (self.blocks[i] ^ other.blocks[i]).count_ones();
+        }
+        d
     }
 
     pub fn multi_index_values(&self, mut bits_per_index: usize) -> Vec<u64> {
@@ -87,32 +101,18 @@ impl BitCode {
         if bit_number < self.num_bits() {
             let block_num = bit_number / 64;
             let block_pos = bit_number % 64;
-            let flag = 1 << block_pos;
-            if value {
-                self.blocks[block_num] |= flag;
-            } else {
-                self.blocks[block_num] &= !flag;
-            }
+            let mask = 1 << block_pos;
+            if value { self.blocks[block_num] |= mask; } else { self.blocks[block_num] &= !mask; }
         }
     }
+}
 
-    #[inline]
-    pub fn count_ones(&self) -> u32 {
-        let mut o: u32 = 0;
-        for block in &self.blocks {
-            o += block.count_ones();
-        }
-        o
-    }
 
-    #[inline]
-    pub fn hamming_distance(&self, other: &BitCode) -> u32 {
-        let mut d: u32 = 0;
-        for i in 0..min(self.blocks.len(), other.blocks.len()) {
-            d += (self.blocks[i] ^ other.blocks[i]).count_ones();
-        }
-        d
-    }
+#[inline]
+fn num_blocks_needed(num_bits: usize) -> usize {
+    let mut num_blocks = num_bits / 64;
+    if (num_bits % 64) != 0 { num_blocks += 1};
+    num_blocks
 }
 
 
@@ -121,6 +121,15 @@ mod tests {
     use super::BitCode;
     use utils::random_bit_string;
 
+    #[test]
+    fn new() {
+        let bc = BitCode::new(63);
+        assert_eq!(bc.num_blocks(), 1);
+        let bc = BitCode::new(64);
+        assert_eq!(bc.num_blocks(), 1);
+        let bc = BitCode::new(65);
+        assert_eq!(bc.num_blocks(), 2);
+    }
 
     #[test]
     fn set_get() {
