@@ -1,40 +1,25 @@
 use bit_code::BitCode;
+use random_projections::RandomProjections;
 use string_features::StringFeatures;
-
-/// Encodes a string as a BitCode.
-///
-/// Bits are derived by mapping features to specific bits via the hashing trick, and flipping bits every time a feature is assigned to a bit. The upshot of this algorithm is that each bit in the bitcode indicates whether the number of string sub-features that were mapped to the bin corresponding to the bit via the hashing trick is odd or even.
-pub fn string_to_bit_code(string: &str, nbits: usize) -> BitCode {
-    let mut bit_vector: Vec<bool> = vec![false; nbits];
-    for hash_value in StringFeatures::default(&string) {
-        let bit_num = hash_value % nbits;
-        bit_vector[bit_num] = !bit_vector[bit_num];
-    }
-    // Create and return the BitCode.
-    BitCode::from_bools(&bit_vector)
-}
 
 
 /// Encodes an input string as a BitCode.
-pub fn string_to_bit_code_via_feature_vector(string: &str, random_projections: &Vec<Vec<f64>>) -> BitCode {
-    // Infer dimensions from random projections.
-    let nd = random_projections[0].len();
-    let nb = random_projections.len();
-    // Convert string to feature vector.
-    let feature_vector: Vec<f64> = string_to_feature_vector(string, nd);
-    // Convert the feature vector to a Vec<bool> using random projections.
-    let mut bit_vector: Vec<bool> = vec![false; nb];
-    for (i, projection_vector) in random_projections.iter().enumerate() {
-        let mut dotprod: f64 = 0.0;
-        for j in 0..nd {
-            dotprod += feature_vector[j] * projection_vector[j];
-        }
-        if dotprod > 0.0 {
-            bit_vector[i] = true;
-        }
+pub fn string_to_bit_code(string: &str, random_projections: &RandomProjections) -> Option<BitCode> {
+    // Get feature vector from string.
+    let feature_vector: Vec<f64> = string_to_feature_vector(
+        string,
+        random_projections.dim_in(),
+    );
+    // Compute bools from feature vector via random projections.
+    let bools = random_projections.project(feature_vector);
+    match bools {
+        Some(b) => {
+            let mut bit_code = BitCode::new(b.len());
+            for i in 0..b.len() { bit_code.set(i, b[i]); };
+            return Some(bit_code);
+        },
+        None => return None,
     }
-    // Create and return the BitCode.
-    BitCode::from_bools(&bit_vector)
 }
 
 
@@ -55,8 +40,8 @@ pub fn string_to_feature_vector(string: &str, dim: usize) -> Vec<f64> {
 
 #[cfg(test)]
 mod tests {
-    use random_projections;
-    use super::{string_to_bit_code, string_to_bit_code_via_feature_vector, string_to_feature_vector};
+    use random_projections::{RandomProjections};
+    use super::{string_to_bit_code, string_to_feature_vector};
     use test::Bencher;
     use utils::random_string;
 
@@ -64,21 +49,12 @@ mod tests {
     /// Deriving bit code from a string on 2 occasions should yield the same bit code.
     #[test]
     fn test_string_to_bit_code() {
-        let s = "Supercalifragilisticexpialidocious";
-        let bc1 = string_to_bit_code(&s, 256);
-        let bc2 = string_to_bit_code(&s, 256);
-        assert_eq!(bc1.hamming_distance(&bc2), 0);
-    }
-
-    /// Deriving bit code from a string on 2 occasions should yield the same bit code.
-    #[test]
-    fn test_string_to_bit_code_via_feature_vector() {
         let string = "Supercalifragilisticexpialidocious";
         let num_features = 500;
         let num_bits = 256;
-        let random_projs = random_projections::get_random_projections(num_features, num_bits);
-        let bit_code_1 = string_to_bit_code_via_feature_vector(&string, &random_projs);
-        let bit_code_2 = string_to_bit_code_via_feature_vector(&string, &random_projs);
+        let random_projs = RandomProjections::new(num_features, num_bits);
+        let bit_code_1 = string_to_bit_code(&string, &random_projs).unwrap();
+        let bit_code_2 = string_to_bit_code(&string, &random_projs).unwrap();
         println!("{:?}", bit_code_1);
         println!("{:?}", bit_code_2);
         assert_eq!(bit_code_1.hamming_distance(&bit_code_2), 0);
@@ -97,21 +73,10 @@ mod tests {
     fn encode_string(b: &mut Bencher) {
         // Generate random string.
         let random_string = random_string(100);
+        let random_projs = RandomProjections::new(500, 256);
         // Benchmark time to encode the strings as bit codes.
         b.iter(|| {
-            string_to_bit_code(&random_string, 256)
-        });
-    }
-
-    #[bench]
-    fn encode_string_via_feature_vector(b: &mut Bencher) {
-        // Generate random string.
-        let random_string = random_string(100);
-        // Generate random projections vectors.
-        let rps = random_projections::get_random_projections(500, 256);
-        // Benchmark time to encode the strings as bit codes.
-        b.iter(|| {
-            string_to_bit_code_via_feature_vector(&random_string, &rps)
+            string_to_bit_code(&random_string, &random_projs)
         });
     }
 }

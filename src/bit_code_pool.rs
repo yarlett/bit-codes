@@ -1,26 +1,26 @@
 use bit_code::BitCode;
 use bit_code_index::BitCodeIndex;
-use encoders::string_to_bit_code_via_feature_vector;
-use random_projections::get_random_projections;
+use encoders::string_to_bit_code;
+use random_projections::RandomProjections;
+use utils::num_blocks_needed;
 
 
 #[derive(Debug)]
 pub struct BitCodePool {
-    bit_codes: Vec<BitCode>,            // Bit codes in the pool.
-    ids: Vec<u64>,                      // Identifiers associated with bit codes (e.g. primary keys in database representation).
-    index: BitCodeIndex,        // Optional multi-index to enable sublinear-time searching.
-    num_bits: usize,                    // Number of bits in bit codes.
-    num_blocks: usize,                  // Number of u64 blocks in bit codes.
-    random_projections: Vec<Vec<f64>>,  // Random projections used to convert features to bits.
+    bit_codes: Vec<BitCode>,                // Bit codes in the pool.
+    ids: Vec<u64>,                          // Identifiers associated with bit codes (e.g. primary keys in database representation).
+    index: BitCodeIndex,                    // Optional multi-index to enable sublinear-time searching.
+    num_bits: usize,                        // Number of bits in bit codes.
+    num_blocks: usize,                      // Number of u64 blocks in bit codes.
+    random_projections: RandomProjections,  // Random projections used to convert features to bits.
 }
 
 
 impl BitCodePool {
     pub fn new(features: usize, mut num_bits: usize) -> Self {
         if num_bits == 0 { num_bits = 64 };
-        let num_blocks = (num_bits / 64) + 1;
-        let random_projections = get_random_projections(features, num_bits);
-        // TODO: Store IDs in BitCodes themselves?
+        let num_blocks = num_blocks_needed(num_bits);
+        let random_projections = RandomProjections::new(features, num_bits);
         BitCodePool {
             bit_codes: Vec::new(),
             ids: Vec::new(),
@@ -33,9 +33,14 @@ impl BitCodePool {
 
     // Add a bit code created from a string to the pool.
     pub fn add(&mut self, string: &str, id: u64) {
-        let bit_code = string_to_bit_code_via_feature_vector(&string, &self.random_projections);
-        self.bit_codes.push(bit_code);
-        self.ids.push(id);
+        let bit_code_option = string_to_bit_code(&string, &self.random_projections);
+        match bit_code_option {
+            Some(bit_code) => {
+                self.bit_codes.push(bit_code);
+                self.ids.push(id);
+            },
+            None => (),
+        }
     }
 
     pub fn get(&self, i: usize) -> Option<&BitCode> {
@@ -141,9 +146,10 @@ mod tests {
     }
 
     #[bench]
+    #[ignore]
     fn search_bit_code_pool_10000_by_256(b: &mut Bencher) {
         // Create a bit pool of 1000 256 bit codes.
-        let mut bit_code_pool = BitCodePool::new(1000, 256);
+        let mut bit_code_pool = BitCodePool::new(300, 256);
         for id in 0..10_000 {
             let string = random_string(50);
             bit_code_pool.add(&string, id);
@@ -155,9 +161,10 @@ mod tests {
     }
 
     #[bench]
+    #[ignore]
     fn search_bit_code_pool_10000_by_256_with_index(b: &mut Bencher) {
         // Create a bit pool of 1000 256 bit codes.
-        let mut bit_code_pool = BitCodePool::new(1000, 256);
+        let mut bit_code_pool = BitCodePool::new(300, 256);
         for id in 0..10_000 {
             let string = random_string(50);
             bit_code_pool.add(&string, id);

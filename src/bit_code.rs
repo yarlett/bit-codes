@@ -1,4 +1,7 @@
+use encoders::string_to_feature_vector;
+use random_projections::RandomProjections;
 use std::cmp::min;
+use utils::num_blocks_needed;
 
 
 #[derive(Debug)]
@@ -22,7 +25,7 @@ impl BitCode {
         bc
     }
 
-    pub fn from_string(string: &str) -> Self {
+    pub fn from_bool_string(string: &str) -> Self {
         let mut bools: Vec<bool> = Vec::new();
         for c in string.chars() {
             if c == '1' { bools.push(true); } else { bools.push(false); };
@@ -33,6 +36,20 @@ impl BitCode {
             bc.set(i, *b);
         }
         bc
+    }
+
+    pub fn from_string(string: &str, random_projections: RandomProjections) -> Self {
+        // Get feature vector from string.
+        let feature_vector: Vec<f64> = string_to_feature_vector(
+            string,
+            random_projections.dim_in(),
+        );
+        // Compute bools from feature vector via random projections.
+        let bools = random_projections.project(feature_vector).unwrap();
+        // Create and return the BitCode.
+        let mut bit_code = BitCode::new(bools.len());
+        for i in 0..bools.len() { bit_code.set(i, bools[i]); }
+        bit_code
     }
 
     // Methods.
@@ -108,14 +125,6 @@ impl BitCode {
 }
 
 
-#[inline]
-fn num_blocks_needed(num_bits: usize) -> usize {
-    let mut num_blocks = num_bits / 64;
-    if (num_bits % 64) != 0 { num_blocks += 1};
-    num_blocks
-}
-
-
 #[cfg(test)]
 mod tests {
     use super::BitCode;
@@ -142,6 +151,8 @@ mod tests {
         bc.set(30, true);
         assert_eq!(bc.count_ones(), 3);
         assert_eq!(bc.get(10), Some(true));
+        assert_eq!(bc.get(20), Some(true));
+        assert_eq!(bc.get(30), Some(true));
         bc.set(10, false);
         assert_eq!(bc.get(10), Some(false));
         assert_eq!(bc.count_ones(), 2);
@@ -149,14 +160,14 @@ mod tests {
 
     #[test]
     fn multi_index_values() {
-        let bc = BitCode::from_string("010101010101");
+        let bc = BitCode::from_bool_string("010101010101");
         let keys = bc.multi_index_values(4);
         assert_eq!(keys.len(), 16);
     }
 
     #[test]
-    fn new_bit_code_from_string() {
-        let bc = BitCode::from_string("010101010101");
+    fn new_bit_code_from_bool_string() {
+        let bc = BitCode::from_bool_string("010101010101");
         assert_eq!(bc.num_bits(), 64);
         assert_eq!(bc.num_blocks(), 1);
         assert_eq!(bc.count_ones(), 6);
@@ -183,22 +194,22 @@ mod tests {
 
     #[test]
     fn bit_codes_are_equal() {
-        let bc1 = BitCode::from_string("010101010101");
+        let bc1 = BitCode::from_bool_string("010101010101");
         let bc2 = BitCode::from_bools(&vec![false, true, false, true, false, true, false, true, false, true, false, true]);
         assert_eq!(bc1.hamming_distance(&bc2), 0);
     }
 
     #[test]
     fn new_bit_code_from_random_string() {
-        let bc = BitCode::from_string(&random_bit_string(256));
+        let bc = BitCode::from_bool_string(&random_bit_string(256));
         assert_eq!(bc.num_bits(), 256);
     }
 
     #[test]
     fn hamming_distance() {
-        let bc1 = BitCode::from_string("010101010101");
+        let bc1 = BitCode::from_bool_string("010101010101");
         assert_eq!(bc1.hamming_distance(&bc1), 0);
-        let bc2 = BitCode::from_string("101010101010");
+        let bc2 = BitCode::from_bool_string("101010101010");
         assert_eq!(bc1.hamming_distance(&bc1), 0);
         assert_eq!(bc2.hamming_distance(&bc2), 0);
         assert_eq!(bc1.hamming_distance(&bc2), 12);
