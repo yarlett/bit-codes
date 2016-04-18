@@ -21,17 +21,16 @@ fn main() {
     let string = "Supercalifragilisticexpialidocious";
     let num_features = 500;
     let num_bits = 256;
-    let random_projs = bit_codes::random_projections::get_random_projections(num_features, num_bits);
-    let bit_code = bit_codes::encoders::string_to_bit_code_via_feature_vector(&string, &random_projs);
+    let random_projs = bit_codes::random_projections::RandomProjections::new(num_features, num_bits);
+    let bit_code = bit_codes::encoders::string_to_bit_code(&string, &random_projs).unwrap();
     println!("{:?}", bit_code);
 }
-
 ```
 
 The resulting bit code will be represented by 4 64-bit unsigned integers:
 
 ```rust
-BitCode { blocks: [7362129119163033604, 18080254231187725207, 2073496217670817622, 15739700542835670175], nbits: 256 }
+BitCode { blocks: [7362129119163033604, 18080254231187725207, 2073496217670817622, 15739700542835670175] }
 ```
 
 ### Creating A Bit Code Pool
@@ -45,9 +44,9 @@ extern crate bit_codes;
 
 fn main() {
     // Initialize bit code pool.
-    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(256, 1000);
+    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(1_000, 256);
     // Insert some bit codes into the pool.
-    for id in 0..10000 {
+    for id in 0..10_000 {
         let string = bit_codes::utils::random_string(100);
         bit_code_pool.add(&string, id);
     }
