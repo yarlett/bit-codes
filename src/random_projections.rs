@@ -1,6 +1,7 @@
 use rand::distributions::IndependentSample;
 use rand::distributions::normal::Normal;
 use rand::isaac::{Isaac64Rng};
+use string_features::StringFeatures;
 
 
 #[derive(Debug)]
@@ -13,7 +14,7 @@ pub struct RandomProjections {
 
 impl RandomProjections {
     pub fn new(dim_in: usize, dim_out: usize) -> Self {
-        let vectors = get_random_projection_vectors(dim_in, dim_out, None);
+        let vectors = get_random_projection_vectors(dim_in, dim_out);
         RandomProjections{ dim_in: dim_in, dim_out: dim_out, vectors: vectors }
     }
 
@@ -22,26 +23,36 @@ impl RandomProjections {
         self.dim_in
     }
 
-    pub fn project(&self, features: Vec<f64>) -> Option<Vec<bool>> {
-        if features.len() != self.dim_in { return None; }
-        let mut bits: Vec<bool> = Vec::new();
-        for v in &self.vectors {
-            let mut acc: f64 = 0.0;
-            for (i, f) in features.iter().enumerate() { acc += v[i] * f; }
-            bits.push(acc > 0.0);
+    #[inline]
+    pub fn dim_out(&self) -> usize {
+        self.dim_out
+    }
+
+    #[inline]
+    pub fn set_bool_vector(&self, features: &Vec<f64>, bools: &mut Vec<bool>) {
+        for i in 0..self.vectors.len() {
+            let mut acc = 0.0;
+            for j in 0..self.vectors[i].len() { acc += self.vectors[i][j] * features[j]; }
+            bools[i] = acc > 0.0;
         }
-        Some(bits)
+    }
+
+    #[inline]
+    pub fn set_feature_vector(&self, string: &str, features: &mut Vec<f64>) {
+        let n = features.len();
+        // Reset features.
+        for i in 0..n { features[i] = 0.0; }
+        // Increment features based on string features.
+        for hash_value in StringFeatures::default(string) {
+            let bin = hash_value % n;
+            if (hash_value as i64) > 0 { features[bin] += 1.0; } else { features[bin] -= 1.0; }
+        }
     }
 }
 
 
-pub fn get_random_projection_vectors(dim_in: usize, dim_out: usize, seed: Option<u64>) -> Vec<Vec<f64>> {
+pub fn get_random_projection_vectors(dim_in: usize, dim_out: usize) -> Vec<Vec<f64>> {
     let mut rng = Isaac64Rng::new_unseeded();
-    // TODO: Write code to set seed when one is provided.
-    // match seed {
-    //     Some(x) => set seed of rng here!,
-    //     _ => (),
-    // }
     let normal = Normal::new(0.0, 1.0);
     let mut vectors: Vec<Vec<f64>> = Vec::new();
     for _ in 0..dim_out {
@@ -62,8 +73,8 @@ mod tests {
     #[test]
     fn random_projections_generate() {
         let (nd, nb) = (500, 256);
-        let rps1 = get_random_projection_vectors(nd, nb, None);
-        let rps2 = get_random_projection_vectors(nd, nb, None);
+        let rps1 = get_random_projection_vectors(nd, nb);
+        let rps2 = get_random_projection_vectors(nd, nb);
         for b in 0..nb {
             for d in 0..nd {
                 assert_eq!(rps1[b][d], rps2[b][d]);

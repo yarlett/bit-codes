@@ -1,4 +1,4 @@
-use encoders::string_to_feature_vector;
+//use encoders::string_to_feature_vector;
 use random_projections::RandomProjections;
 use std::cmp::min;
 use utils::num_blocks_needed;
@@ -40,16 +40,13 @@ impl BitCode {
 
     pub fn from_string(string: &str, random_projections: RandomProjections) -> Self {
         // Get feature vector from string.
-        let feature_vector: Vec<f64> = string_to_feature_vector(
-            string,
-            random_projections.dim_in(),
-        );
-        // Compute bools from feature vector via random projections.
-        let bools = random_projections.project(feature_vector).unwrap();
+        let mut features = vec![0.0; random_projections.dim_in()];
+        random_projections.set_feature_vector(string, &mut features);
+        // Get bools via random projections.
+        let mut bools = vec![false; random_projections.dim_out()];
+        random_projections.set_bool_vector(&features, &mut bools);
         // Create and return the BitCode.
-        let mut bit_code = BitCode::new(bools.len());
-        for i in 0..bools.len() { bit_code.set(i, bools[i]); }
-        bit_code
+        BitCode::from_bools(&bools)
     }
 
     // Methods.
@@ -91,11 +88,11 @@ impl BitCode {
         if bits_per_index < 1 { bits_per_index = 1 };
         if bits_per_index > 64 { bits_per_index = 64 };
         // Calculate number of indexes.
-        let n = self.num_bits();
-        let num_indexes = n / bits_per_index;
+        let num_bits = self.num_bits();
+        let num_indexes = ((num_bits - 1) / bits_per_index) + 1;
         // Iterate over bits setting index values.
         let mut index_values: Vec<u64> = vec![0; num_indexes];
-        for i in 0..n {
+        for i in 0..num_bits {
             let index_num = i / bits_per_index;
             let position_num = i % bits_per_index;
             if self.get(i).unwrap() { index_values[index_num] |= 1 << position_num } ;
@@ -163,6 +160,8 @@ mod tests {
         let bc = BitCode::from_bool_string("010101010101");
         let keys = bc.multi_index_values(4);
         assert_eq!(keys.len(), 16);
+        let keys = bc.multi_index_values(10);
+        assert_eq!(keys.len(), 7);
     }
 
     #[test]

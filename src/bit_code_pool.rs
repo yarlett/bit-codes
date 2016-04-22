@@ -1,6 +1,6 @@
 use bit_code::BitCode;
 use bit_code_index::BitCodeIndex;
-use encoders::string_to_bit_code;
+use encoders::string_to_bit_code_no_allocation;
 use random_projections::RandomProjections;
 use utils::num_blocks_needed;
 
@@ -8,6 +8,8 @@ use utils::num_blocks_needed;
 #[derive(Debug)]
 pub struct BitCodePool {
     bit_codes: Vec<BitCode>,                // Bit codes in the pool.
+    bools: Vec<bool>,                       // Bool storage to compute bit codes.
+    features: Vec<f64>,                     // Feature storage to compute bit codes.
     ids: Vec<u64>,                          // Identifiers associated with bit codes (e.g. primary keys in database representation).
     index: BitCodeIndex,                    // Optional multi-index to enable sublinear-time searching.
     num_bits: usize,                        // Number of bits in bit codes.
@@ -17,32 +19,28 @@ pub struct BitCodePool {
 
 
 impl BitCodePool {
-    pub fn new(features: usize, mut num_bits: usize) -> Self {
+    pub fn new(num_features: usize, mut num_bits: usize) -> Self {
         if num_bits == 0 { num_bits = 64 };
-        let num_blocks = num_blocks_needed(num_bits);
-        let random_projections = RandomProjections::new(features, num_bits);
         BitCodePool {
             bit_codes: Vec::new(),
+            bools: vec![false; num_bits],
+            features: vec![0.0; num_features],
             ids: Vec::new(),
             index: BitCodeIndex::new(),
             num_bits: num_bits,
-            num_blocks: num_blocks,
-            random_projections: random_projections,
+            num_blocks: num_blocks_needed(num_bits),
+            random_projections: RandomProjections::new(num_features, num_bits),
         }
     }
 
     // Add a bit code created from a string to the pool.
     pub fn add(&mut self, string: &str, id: u64) {
-        let bit_code_option = string_to_bit_code(&string, &self.random_projections);
-        match bit_code_option {
-            Some(bit_code) => {
-                self.bit_codes.push(bit_code);
-                self.ids.push(id);
-            },
-            None => (),
-        }
+        let bit_code = string_to_bit_code_no_allocation(&string, &self.random_projections, &mut self.features, &mut self.bools);
+        self.bit_codes.push(bit_code);
+        self.ids.push(id);
     }
 
+    // Get a BitCode from the pool.
     pub fn get(&self, i: usize) -> Option<&BitCode> {
         if i < self.len() {
             return Some(&self.bit_codes[i]);
@@ -108,7 +106,6 @@ impl BitCodePool {
 #[cfg(test)]
 mod tests {
     use super::BitCodePool;
-    use test::Bencher;
     use utils::random_string;
 
     #[test]
@@ -132,47 +129,22 @@ mod tests {
         }
     }
 
-    #[bench]
-    fn new_bit_code_pool_100_by_256(b: &mut Bencher) {
-        // Benchmark time to create a bit pool of 100 256-bit codes.
-        b.iter(|| {
-            let mut bit_code_pool = BitCodePool::new(1000, 256);
-            for id in 0..100 {
-                let string = random_string(10);
-                bit_code_pool.add(&string, id);
-            }
-            bit_code_pool
-        });
-    }
-
-    #[bench]
-    #[ignore]
-    fn search_bit_code_pool_10000_by_256(b: &mut Bencher) {
-        // Create a bit pool of 1000 256 bit codes.
-        let mut bit_code_pool = BitCodePool::new(300, 256);
-        for id in 0..10_000 {
-            let string = random_string(50);
+    #[test]
+    fn new_bit_code_pool() {
+        // Parameters.
+        let num_bits = 256;
+        let num_features = 500;
+        let num_bit_codes: usize = 100;
+        // Make a bit code pool.
+        let mut bit_code_pool = BitCodePool::new(num_features, num_bits);
+        for id in 0..(num_bit_codes as u64) {
+            let string = random_string(10);
             bit_code_pool.add(&string, id);
         }
-        //Select a needle to look for in the haystack.
-        let needle = &bit_code_pool.bit_codes[0];
-        // Benchmark the time to search for the needle.
-        b.iter(|| { bit_code_pool.search(needle, 10) });
-    }
-
-    #[bench]
-    #[ignore]
-    fn search_bit_code_pool_10000_by_256_with_index(b: &mut Bencher) {
-        // Create a bit pool of 1000 256 bit codes.
-        let mut bit_code_pool = BitCodePool::new(300, 256);
-        for id in 0..10_000 {
-            let string = random_string(50);
-            bit_code_pool.add(&string, id);
-        }
-        bit_code_pool.index();
-        //Select a needle to look for in the haystack.
-        let needle = &bit_code_pool.bit_codes[0];
-        // Benchmark the time to search for the needle.
-        b.iter(|| { bit_code_pool.search_with_index(needle, 10) });
+        // Test.
+        assert_eq!(bit_code_pool.num_bits, num_bits);
+        assert_eq!(bit_code_pool.bools.len(), num_bits);
+        assert_eq!(bit_code_pool.features.len(), num_features);
+        assert_eq!(bit_code_pool.bit_codes.len(), num_bit_codes);
     }
 }
