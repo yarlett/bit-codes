@@ -1,7 +1,7 @@
 //use encoders::string_to_feature_vector;
 use random_projections::RandomProjections;
 use std::cmp::min;
-use utils::num_blocks_needed;
+use utils::{get_num_indexes, num_blocks_needed};
 
 
 #[derive(Debug)]
@@ -89,7 +89,7 @@ impl BitCode {
         if bits_per_index > 64 { bits_per_index = 64 };
         // Calculate number of indexes.
         let num_bits = self.num_bits();
-        let num_indexes = ((num_bits - 1) / bits_per_index) + 1;
+        let num_indexes = get_num_indexes(num_bits, bits_per_index);
         // Iterate over bits setting index values.
         let mut index_values: Vec<u64> = vec![0; num_indexes];
         for i in 0..num_bits {

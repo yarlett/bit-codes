@@ -2,7 +2,7 @@ use bit_code::BitCode;
 use bit_code_index::BitCodeIndex;
 use encoders::string_to_bit_code_no_allocation;
 use random_projections::RandomProjections;
-use utils::num_blocks_needed;
+use utils::{get_num_indexes, num_blocks_needed};
 
 
 #[derive(Debug)]
@@ -54,15 +54,13 @@ impl BitCodePool {
 
     // TODO: Figure out a way to expire the index when new bit codes added?
     // Set multi-index on the bit codes currently in the pool.
-    pub fn index(&mut self) {
-        let bits_per_index = 8;
+    pub fn index(&mut self, mut bits_per_index: usize) {
+        if bits_per_index == 0 { bits_per_index = 1; }
+        if bits_per_index > self.num_bits { bits_per_index = self.num_bits }
         // Number of indexes.
-        let mut num_indexes = 0;
-        if self.bit_codes.len() > 0 {
-            num_indexes = self.bit_codes[0].multi_index_values(bits_per_index).len();
-        }
+        let num_indexes = get_num_indexes(self.num_bits, bits_per_index);
         // Construct index.
-        self.index.init(num_indexes);
+        self.index.init(bits_per_index, num_indexes);
         for (i, bit_code) in self.bit_codes.iter().enumerate() {
             let index_values = bit_code.multi_index_values(bits_per_index);
             self.index.add(&index_values, i);
@@ -77,8 +75,7 @@ impl BitCodePool {
     pub fn search(&self, needle: &BitCode, radius: u32) -> Vec<u64> {
         let mut ids: Vec<u64> = Vec::new();
         for i in 0..self.bit_codes.len() {
-            let d = self.bit_codes[i].hamming_distance(&needle);
-            if d <= radius {
+            if self.bit_codes[i].hamming_distance(&needle) <= radius {
                 ids.push(self.ids[i]);
             }
         }
@@ -88,11 +85,10 @@ impl BitCodePool {
     pub fn search_with_index(&self, needle: &BitCode, radius: u32) -> Option<Vec<u64>> {
         // Check index is valid for search.
         if (radius as usize) > self.index.max_searchable_radius() { return None };
-        let bits_per_index = 8;
-        let needle_index_values = needle.multi_index_values(bits_per_index);
-        let cands = &self.index.candidates(&needle_index_values);
+        let needle_index_values = needle.multi_index_values(self.index.bits_per_index());
+        let candidates = &self.index.candidates(&needle_index_values);
         let mut ids: Vec<u64> = Vec::new();
-        for c in cands {
+        for c in candidates {
             let d = self.bit_codes[*c].hamming_distance(&needle);
             if d <= radius {
                 ids.push(self.ids[*c]);
@@ -115,7 +111,7 @@ mod tests {
             let string = random_string(3);
             bit_code_pool.add(&string, id);
         }
-        bit_code_pool.index();
+        bit_code_pool.index(8);
         let needle = bit_code_pool.get(0).unwrap();
         let hamming_radius = 31;
         let mut ids1 = bit_code_pool.search(needle, hamming_radius);

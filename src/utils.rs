@@ -2,6 +2,12 @@ use rand::{thread_rng, Rng};
 
 
 #[inline]
+pub fn get_num_indexes(num_bits: usize, bits_per_index: usize) -> usize {
+    ((num_bits - 1) / bits_per_index) + 1
+}
+
+
+#[inline]
 pub fn num_blocks_needed(num_bits: usize) -> usize {
     let mut num_blocks = ((num_bits - 1) / 64) + 1;
     if num_blocks == 0 { num_blocks = 1 };

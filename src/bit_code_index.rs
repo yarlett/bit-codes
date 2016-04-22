@@ -3,13 +3,14 @@ use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub struct BitCodeIndex {
-    indexes: Vec<HashMap<u64, HashSet<usize>>>
+    bits_per_index: usize,
+    indexes: Vec<HashMap<u64, HashSet<usize>>>,
 }
 
 
 impl BitCodeIndex {
     pub fn new() -> Self {
-        BitCodeIndex { indexes: Vec::new() }
+        BitCodeIndex { bits_per_index: 0, indexes: Vec::new() }
     }
 
     // Add multi-index values to the index.
@@ -20,6 +21,10 @@ impl BitCodeIndex {
             }
             self.indexes[i].get_mut(k).unwrap().insert(value);
         }
+    }
+
+    pub fn bits_per_index(&self) -> usize {
+        self.bits_per_index
     }
 
     pub fn candidates(&self, needle_index_values: &Vec<u64>) -> HashSet<usize> {
@@ -35,7 +40,8 @@ impl BitCodeIndex {
         candidates
     }
 
-    pub fn init(&mut self, num_indexes: usize) {
+    pub fn init(&mut self, bits_per_index: usize, num_indexes: usize) {
+        self.bits_per_index = bits_per_index;
         self.indexes = Vec::with_capacity(num_indexes);
         for _ in 0..num_indexes {
             self.indexes.push(HashMap::new());
