@@ -1,4 +1,10 @@
+use fnv::FnvHasher;
 use rand::{thread_rng, Rng};
+use std::hash::BuildHasherDefault;
+
+
+// Custom hasher type using FNV algorithm (faster for small keys such as usize).
+pub type FastHasher = BuildHasherDefault<FnvHasher>;
 
 
 #[inline]

@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
+use utils::FastHasher;
 
 
 #[derive(Debug)]
 pub struct BitCodeIndex {
     bits_per_index: usize,
-    indexes: Vec<HashMap<u64, HashSet<usize>>>,
+    indexes: Vec<HashMap<u64, HashSet<usize, FastHasher>, FastHasher>>,
 }
 
 
@@ -17,7 +18,7 @@ impl BitCodeIndex {
     pub fn add(&mut self, index_values: &Vec<u64>, value: usize) {
         for (i, k) in index_values.iter().enumerate() {
             if !self.indexes[i].contains_key(k) {
-                self.indexes[i].insert(*k, HashSet::new());
+                self.indexes[i].insert(*k, HashSet::default());
             }
             self.indexes[i].get_mut(k).unwrap().insert(value);
         }
@@ -27,8 +28,8 @@ impl BitCodeIndex {
         self.bits_per_index
     }
 
-    pub fn candidates(&self, needle_index_values: &Vec<u64>) -> HashSet<usize> {
-        let mut candidates = HashSet::new();
+    pub fn candidates(&self, needle_index_values: &Vec<u64>) -> HashSet<usize, FastHasher> {
+        let mut candidates = HashSet::default();
         for (i, index_value) in needle_index_values.iter().enumerate() {
             if self.indexes[i].contains_key(index_value) {
                 let entries = self.indexes[i].get(index_value).unwrap();
@@ -44,7 +45,7 @@ impl BitCodeIndex {
         self.bits_per_index = bits_per_index;
         self.indexes = Vec::with_capacity(num_indexes);
         for _ in 0..num_indexes {
-            self.indexes.push(HashMap::new());
+            self.indexes.push(HashMap::default());
         }
     }
 

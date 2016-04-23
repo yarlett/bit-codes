@@ -1,11 +1,9 @@
 use bit_code::BitCode;
 use bit_code_index::BitCodeIndex;
 use encoders::string_to_bit_code_no_allocation;
-use fnv::FnvHasher;
 use random_projections::RandomProjections;
 use std::collections::HashSet;
-use std::hash::BuildHasherDefault;
-use utils::{get_num_indexes, num_blocks_needed};
+use utils::{get_num_indexes, num_blocks_needed, FastHasher};
 
 
 #[derive(Debug)]
@@ -76,8 +74,7 @@ impl BitCodePool {
 
     pub fn resolve_entities(&self, radius: u32) -> Vec<Vec<usize>> {
         // Initialize indices of bit codes to search through.
-        let fnv = BuildHasherDefault::<FnvHasher>::default();
-        let mut population = HashSet::with_capacity_and_hasher(self.len(), fnv);
+        let mut population: HashSet<usize, FastHasher> = HashSet::default();
         for i in 0..self.len() { population.insert(i); }
         // Compute entity sets.
         let mut entity_sets: Vec<Vec<usize>> = Vec::new();
