@@ -1,5 +1,6 @@
 #![feature(test)]
 
+extern crate fnv;
 extern crate rand;
 extern crate test;
 
