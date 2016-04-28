@@ -54,8 +54,14 @@ impl BitCodePool {
         return None;
     }
 
+    #[inline]
     pub fn len(&self) -> usize {
         self.bit_codes.len()
+    }
+
+    #[inline]
+    pub fn index_max_searchable_radius(&self) -> usize {
+        self.index.max_searchable_radius()
     }
 
     // TODO: Figure out a way to expire the index when new bit codes added?

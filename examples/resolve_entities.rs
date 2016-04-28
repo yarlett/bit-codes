@@ -13,7 +13,7 @@ fn main() {
     for _ in 0..num_items {
         strings.push(bit_codes::utils::random_string(string_length));
     }
-    // Initialize bit code pool from random strings.
+    // Create bit code pool from random strings.
     let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits);
     for i in 0..strings.len() { bit_code_pool.add(&strings[i], i as u64); }
     // Resolve entities in bit code pool.
