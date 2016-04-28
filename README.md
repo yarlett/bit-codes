@@ -61,3 +61,84 @@ fn main() {
     println!("{:?}", bit_code_pool.index_show());
 }
 ```
+
+### Entity Resolution
+
+Entity resolution is the process of determining, amongst a set of records, which records refer to identical entities. In cases where a set of records are determined to refer to the same entity the records can either be identical (in which case we are essentially detecting duplicates in our data), or non-identical but similar (in which case the records represent noisy, corrupt or different descriptions of the same entity). In addition the records can be from a single homogeneous pool of records (such as a single database table), or from diverse sources (in which case we are solving a record linkage problem). We use 'entity resolution' as a cover-all term for all these cases.
+
+The bit codes library allows entity resolution to be performed over a bit code pool, by grouping bit codes within a certain radius of one another together into an entity set. The idea is that bit codes that are surprisingly similar to one another are likely to correspond to highly similar string representations which, in turn, are likely to describe similar or identical entities. Obviously the hamming radius used to determine entity sets will vary depending on the application.
+
+The following code, found in [examples/resolve_entities.rs](examples/resolve_entities.rs), creates a bit code pool from short randomly generated strings, and then groups the corresponding bit codes into entity sets based on a Hamming radius threshold:
+
+```rust
+extern crate bit_codes;
+extern crate time;
+
+fn main() {
+    // Parameters.
+    let num_bits = 256;
+    let num_features = 100;
+    let num_items = 10_000;
+    let radius = 50;
+    let string_length = 5;
+    // Create random strings.
+    let mut strings: Vec<String> = Vec::new();
+    for _ in 0..num_items {
+        strings.push(bit_codes::utils::random_string(string_length));
+    }
+    // Initialize bit code pool from random strings.
+    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits);
+    for i in 0..strings.len() { bit_code_pool.add(&strings[i], i as u64); }
+    // Resolve entities in bit code pool.
+    let t1 = time::precise_time_s();
+    let entity_sets = bit_code_pool.resolve_entities(radius);
+    let t2 = time::precise_time_s();
+    let t_s = format!("{:.*}", 3, t2 - t1);
+    for entity_set in &entity_sets {
+        if entity_set.len() > 1 {
+            for i in entity_set { println!("{:?}", strings[*i]); }
+            println!("");
+        }
+    }
+    println!("Resolved entities into {:} entity sets of bit code pool in {:}s.", entity_sets.len(), t_s);
+}
+```
+
+The code generates output like that shown below. As can be seen, it successfully identifies random strings that are unusually similar to one another. In a real application these strings could refer to similar or identical entities.
+
+```
+"dcKoq"
+"YckOQ"
+
+"UrhEg"
+"uRHeg"
+
+"AHHhK"
+"qaHhh"
+
+"YPrHU"
+"UPRhu"
+
+"ZplSl"
+"ZnPls"
+
+"lyfh9"
+"Yfh9d"
+
+"6mFdd"
+"QMFDd"
+
+"GRanq"
+"Gran0"
+
+"Upekk"
+"PekkD"
+
+"9XxzI"
+"jXxZI"
+
+"HldDD"
+"hdDhV"
+
+Resolved entities into 9989 entity sets of bit code pool in 1.486s.
+```

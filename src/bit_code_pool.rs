@@ -12,7 +12,7 @@ pub struct BitCodePool {
     bools: Vec<bool>,                       // Bool storage to compute bit codes.
     features: Vec<f64>,                     // Feature storage to compute bit codes.
     ids: Vec<u64>,                          // Identifiers associated with bit codes (e.g. primary keys in database representation).
-    index: BitCodeIndex,                    // Optional multi-index to enable sublinear-time searching.
+    index: BitCodeIndex,                    // Multi-index to enable sublinear-time searching.
     num_bits: usize,                        // Number of bits in bit codes.
     num_blocks: usize,                      // Number of u64 blocks in bit codes.
     random_projections: RandomProjections,  // Random projections used to convert features to bits.
@@ -36,7 +36,12 @@ impl BitCodePool {
 
     // Add a bit code created from a string to the pool.
     pub fn add(&mut self, string: &str, id: u64) {
-        let bit_code = string_to_bit_code_no_allocation(&string, &self.random_projections, &mut self.features, &mut self.bools);
+        let bit_code = string_to_bit_code_no_allocation(
+                &string,
+                &self.random_projections,
+                &mut self.features,
+                &mut self.bools,
+        );
         self.bit_codes.push(bit_code);
         self.ids.push(id);
     }
@@ -74,14 +79,13 @@ impl BitCodePool {
 
     pub fn resolve_entities(&self, radius: u32) -> Vec<Vec<usize>> {
         // Initialize indices of bit codes to search through.
-        let mut population: HashSet<usize, FastHasher> = HashSet::default();
+        let mut population: HashSet<usize, FastHasher> = HashSet::with_capacity_and_hasher(self.len(), FastHasher::default());
         for i in 0..self.len() { population.insert(i); }
         // Compute entity sets.
         let mut entity_sets: Vec<Vec<usize>> = Vec::new();
         while !population.is_empty() {
             let mut entity_set: Vec<usize> = Vec::new();
             let i = population.iter().next().unwrap().clone();
-            entity_set.push(i);
             for j in &population {
                 if self.bit_codes[i].hamming_distance(&self.bit_codes[*j]) <= radius { entity_set.push(*j); }
             }
@@ -91,38 +95,28 @@ impl BitCodePool {
         entity_sets
     }
 
-    /// Returns the ids of bit codes with Hamming distance <= radius from the needle.
-    pub fn search(&self, needle: &BitCode, radius: u32) -> Vec<BitCodePoolRef> {
-        let mut results: Vec<BitCodePoolRef> = Vec::new();
+    /// Returns the indices of bit codes with Hamming distance <= radius from the needle.
+    pub fn search(&self, needle: &BitCode, radius: u32) -> Vec<usize> {
+        let mut indices: Vec<usize> = Vec::new();
         for i in 0..self.bit_codes.len() {
-            if self.bit_codes[i].hamming_distance(&needle) <= radius {
-                results.push(BitCodePoolRef{ id: self.ids[i], pos: i});
-            }
+            if self.bit_codes[i].hamming_distance(&needle) <= radius { indices.push(i); }
         }
-        results
+        indices
     }
 
-    pub fn search_with_index(&self, needle: &BitCode, radius: u32) -> Option<Vec<u64>> {
+    /// Returns the indices of bit codes with Hamming distance <= radius from the needle using indexed search.
+    pub fn search_with_index(&self, needle: &BitCode, radius: u32) -> Option<Vec<usize>> {
         // Check index is valid for search.
-        if (radius as usize) > self.index.max_searchable_radius() { return None };
+        if (radius as usize) > self.index.max_searchable_radius() { return None; };
+        // Perform index search.
         let needle_index_values = needle.multi_index_values(self.index.bits_per_index());
-        let candidates = &self.index.candidates(&needle_index_values);
-        let mut ids: Vec<u64> = Vec::new();
-        for c in candidates {
-            let d = self.bit_codes[*c].hamming_distance(&needle);
-            if d <= radius {
-                ids.push(self.ids[*c]);
-            }
+        let candidate_indices = &self.index.candidate_indices(&needle_index_values);
+        let mut indices: Vec<usize> = Vec::new();
+        for c in candidate_indices {
+            if self.bit_codes[*c].hamming_distance(&needle) <= radius { indices.push(*c); }
         }
-        Some(ids)
+        Some(indices)
     }
-}
-
-
-#[derive(Debug)]
-pub struct BitCodePoolRef {
-    id: u64,
-    pos: usize,
 }
 
 
@@ -143,13 +137,14 @@ mod tests {
         let hamming_radius = 31;
         let mut ids1 = bit_code_pool.search(needle, hamming_radius);
         let mut ids2 = bit_code_pool.search_with_index(needle, hamming_radius).unwrap();
+        // Confirm results of unindexed and indexed search are the same.
         assert_eq!(ids1.len(), ids2.len());
         assert!(ids1.len() > 0);
-        // ids1.sort();
-        // ids2.sort();
-        // for i in 0..ids1.len() {
-        //     assert_eq!(ids1[i], ids2[i]);
-        // }
+        ids1.sort();
+        ids2.sort();
+        for i in 0..ids1.len() {
+            assert_eq!(ids1[i], ids2[i]);
+        }
     }
 
     #[test]
@@ -169,5 +164,25 @@ mod tests {
         assert_eq!(bit_code_pool.bools.len(), num_bits);
         assert_eq!(bit_code_pool.features.len(), num_features);
         assert_eq!(bit_code_pool.bit_codes.len(), num_bit_codes);
+    }
+
+    #[test]
+    fn resolve_entities() {
+        // Make a bit code pool.
+        let mut bit_code_pool = BitCodePool::new(100, 256);
+        for id in 0..1_000 {
+            let string = random_string(10);
+            bit_code_pool.add(&string, id);
+        }
+        // Resolve the entities.
+        let entity_sets = bit_code_pool.resolve_entities(10);
+        // Each entity set should have at least 1 member.
+        let mut num_entities = 0;
+        for entity_set in &entity_sets {
+            assert!(entity_set.len() >= 1);
+            num_entities += entity_set.len();
+        }
+        // Number of resolved entities should equalnumber of bit codes in pool.
+        assert_eq!(num_entities, bit_code_pool.len());
     }
 }
