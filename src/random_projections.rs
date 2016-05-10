@@ -43,9 +43,10 @@ impl RandomProjections {
         // Reset features.
         for i in 0..n { features[i] = 0.0; }
         // Increment features based on string features.
-        for hash_value in StringFeatures::default(string) {
+        for (hash_value, weight) in StringFeatures::default(string) {
             let bin = hash_value % n;
-            if (hash_value as i64) > 0 { features[bin] += 1.0; } else { features[bin] -= 1.0; }
+            features[bin] += weight;
+            //if (hash_value as i64) > 0 { features[bin] += 1.0; } else { features[bin] -= 1.0; }
         }
     }
 }

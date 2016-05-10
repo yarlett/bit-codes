@@ -36,17 +36,17 @@ impl StringFeatures {
         StringFeatures{
             chars: chars,
             position: 0,
-            length_min: 2,
+            length_min: 3,
             length_max: 10,
-            length_cur: 2,
+            length_cur: 3,
         }
     }
 }
 
 
 impl Iterator for StringFeatures {
-    type Item = usize;
-    fn next (&mut self) -> Option<usize> {
+    type Item = (usize, f64);
+    fn next (&mut self) -> Option<(usize, f64)> {
         let n = self.chars.len();
         // Move to next position if 1) the current substring would exceed the bounds of the current string, or 2) the length of the current substring is greater than the maximum length.
         if ((self.position + self.length_cur) > n) || (self.length_cur > self.length_max) {
@@ -63,7 +63,8 @@ impl Iterator for StringFeatures {
         let hash_value = hasher.finish() as usize;
         // Move on to the next state and return the current substring.
         self.length_cur += 1;
-        return Some(hash_value)
+        let weight = ((self.length_cur - 1) as f64).ln();
+        return Some((hash_value, weight))
     }
 }
 
