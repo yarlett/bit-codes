@@ -110,6 +110,25 @@ impl BitCodePool {
         indices
     }
 
+    /// Returns the k nearest neighbors of the needle.
+    pub fn search_knn(&self, needle: &BitCode, k: usize) -> Vec<SearchResult> {
+        let mut results: Vec<SearchResult> = Vec::with_capacity(k);
+        for idx in 0..self.bit_codes.len() {
+            let d = self.bit_codes[idx].hamming_distance(&needle);
+            let n = results.len();
+            if (n == 0) || (d <= results[n - 1].distance) {
+                results.push(SearchResult{ idx: idx, distance: d });
+                // Sort result by ascending distance, and truncate to length k without losing any entries that are the same distance from the needle as the kth (these would be arbitrary exclusions).
+                results.sort_by_key(|key| key.by_distance());
+                if results.len() > k {
+                    let distance_threshold = results[k - 1].distance;
+                    results.retain(|sr| sr.distance <= distance_threshold);
+                }
+            }
+        }
+        results
+    }
+
     /// Returns the indices of bit codes with Hamming distance <= radius from the needle using indexed search.
     pub fn search_with_index(&self, needle: &BitCode, radius: u32) -> Option<Vec<usize>> {
         // Check index is valid for search.
@@ -125,6 +144,21 @@ impl BitCodePool {
     }
 }
 
+
+pub struct SearchResult {
+    idx: usize,
+    distance: u32,
+}
+
+impl SearchResult {
+    pub fn by_distance(&self) -> u32 {
+        self.distance
+    }
+
+    pub fn distance(&self) -> u32 { self.distance }
+
+    pub fn idx(&self) -> usize { self.idx }
+}
 
 #[cfg(test)]
 mod tests {

@@ -36,9 +36,9 @@ impl StringFeatures {
         StringFeatures{
             chars: chars,
             position: 0,
-            length_min: 1,
+            length_min: 2,
             length_max: 10,
-            length_cur: 1,
+            length_cur: 2,
         }
     }
 }
@@ -54,7 +54,7 @@ impl Iterator for StringFeatures {
             self.length_cur = self.length_min;
         }
         // Terminate the iteration when the position falls of the right of the string.
-        if self.position == n { return None }
+        if self.position == (n - self.length_min + 1) { return None }
         // Get the sub-string of characters.
         let subchars = &self.chars[self.position..(self.position + self.length_cur)];
         // Compute the hash value of the sub-string.
