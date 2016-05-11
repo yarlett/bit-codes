@@ -1,78 +1,38 @@
-use std::hash::{Hasher, SipHasher};
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
+use fnv::FnvHasher;
 
 
-// TODO: Look into string kernels here to see if there's a more general framework that can be used to iterate over the features of strings.
+// String features are character ngrams of specified lengths. By exploding strings into a much larger number of sub-features in this way, non-identical but similar strings will end up overlapping in the sub-features they exhibit. Thus string similarity can be measured in terms of the overlapping sub-features.
 
 
-/// Structure that can be iterated over to generate the sub-features of a string.
-///
-/// The sub-features are character ngrams up to a maximum length. By exploding strings into a much larger number of sub-features in this way, non-identical but similar strings will end up overlapping in the sub-features they exhibit. Thus string similarity can be measured in terms of the overlapping sub-features.
-pub struct StringFeatures {
-    chars: Vec<char>,
-    position: usize,
-    length_cur: usize,
-    length_min: usize,
-    length_max: usize,
-}
-
-
-impl StringFeatures {
-    pub fn new(string: &str, ignore_case: bool, length_min: usize, length_max: usize) -> StringFeatures {
-        let chars: Vec<char>;
-        if ignore_case { chars = string.to_lowercase().chars().collect(); }
-        else { chars = string.chars().collect(); }
-        StringFeatures{
-            chars: chars,
-            position: 0,
-            length_min: length_min,
-            length_max: length_max,
-            length_cur: length_min,
+// Returns a vector of character ngrams contained in the input string.
+pub fn get_string_features(string: &str, ngram_lengths: &Vec<usize>) -> Vec<(u64, f64)> {
+    let mut features: Vec<(u64, f64)> = Vec::new();
+    let chars: Vec<char> = string.to_lowercase().chars().collect();
+    let n = chars.len();
+    for l in ngram_lengths {
+        if l <= &n {
+            for pos in 0..(n - l + 1) {
+                // Get the character ngram.
+                let ngram = &chars[pos..(pos + l)];
+                // Compute and store the hash value and weight for the character ngram.
+                let mut hasher = FnvHasher::default();
+                ngram.hash(&mut hasher);
+                let hash_value = hasher.finish();
+                let weight = 1.0; // ((ngram.len() + 1) as f64).ln();
+                features.push((hash_value, weight))
+            }
         }
     }
-
-    pub fn default(string: &str) -> StringFeatures {
-        let chars: Vec<char> = string.to_lowercase().chars().collect();
-        StringFeatures{
-            chars: chars,
-            position: 0,
-            length_min: 3,
-            length_max: 10,
-            length_cur: 3,
-        }
-    }
-}
-
-
-impl Iterator for StringFeatures {
-    type Item = (usize, f64);
-    fn next (&mut self) -> Option<(usize, f64)> {
-        let n = self.chars.len();
-        // Move to next position if 1) the current substring would exceed the bounds of the current string, or 2) the length of the current substring is greater than the maximum length.
-        if ((self.position + self.length_cur) > n) || (self.length_cur > self.length_max) {
-            self.position += 1;
-            self.length_cur = self.length_min;
-        }
-        // Terminate the iteration when the position falls of the right of the string.
-        if self.position == (n - self.length_min + 1) { return None }
-        // Get the sub-string of characters.
-        let subchars = &self.chars[self.position..(self.position + self.length_cur)];
-        // Compute the hash value of the sub-string.
-        let mut hasher = SipHasher::new();
-        subchars.hash(&mut hasher);
-        let hash_value = hasher.finish() as usize;
-        // Move on to the next state and return the current substring.
-        self.length_cur += 1;
-        let weight = ((self.length_cur - 1) as f64).ln();
-        return Some((hash_value, weight))
-    }
+    features
 }
 
 
 #[cfg(test)]
 mod tests {
-    use std::hash::{Hasher, SipHasher};
-    use super::StringFeatures;
+    use fnv::FnvHasher;
+    use std::hash::Hasher;
+    use super::get_string_features;
     use test::Bencher;
     use utils::random_string;
 
@@ -80,10 +40,10 @@ mod tests {
     #[test]
     fn rehash_gives_same() {
         let string = "A random string.";
-        let mut hasher = SipHasher::new();
+        let mut hasher = FnvHasher::default();
         hasher.write(string.as_bytes());
         let h1 = hasher.finish();
-        hasher = SipHasher::new();
+        let mut hasher = FnvHasher::default();
         hasher.write(string.as_bytes());
         let h2 = hasher.finish();
         assert_eq!(h1, h2);
@@ -95,9 +55,9 @@ mod tests {
         let random_string = random_string(100);
         // Benchmark iterating over the hash values of the features of the string.
         b.iter(|| {
-            let string_features = StringFeatures::default(&random_string);
-            let mut sum: usize = 0;
-            for hash_value in string_features { sum = sum ^ hash_value };
+            let string_features = get_string_features(&random_string, &vec![2,3,4,5,6,7]);
+            let mut sum: u64 = 0;
+            for (hash_value, _) in string_features { sum = sum ^ hash_value };
             sum
         })
     }

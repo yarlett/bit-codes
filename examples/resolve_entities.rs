@@ -3,6 +3,7 @@ extern crate time;
 
 fn main() {
     // Parameters.
+    let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
     let num_bits = 256;
     let num_features = 100;
     let num_items = 10_000;
@@ -14,7 +15,7 @@ fn main() {
         strings.push(bit_codes::utils::random_string(string_length));
     }
     // Create bit code pool from random strings.
-    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits);
+    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits, ngram_lengths);
     for i in 0..strings.len() { bit_code_pool.add(&strings[i], i as u64); }
     // Resolve entities in bit code pool.
     let t1 = time::precise_time_s();

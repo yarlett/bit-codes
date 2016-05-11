@@ -21,7 +21,7 @@ fn main() {
     let string = "Supercalifragilisticexpialidocious";
     let num_features = 500;
     let num_bits = 256;
-    let random_projs = bit_codes::random_projections::RandomProjections::new(num_features, num_bits);
+    let random_projs = bit_codes::random_projections::RandomProjections::default(num_features, num_bits);
     let bit_code = bit_codes::encoders::string_to_bit_code(&string, &random_projs);
     println!("{:?}", bit_code);
 }
@@ -44,21 +44,18 @@ extern crate bit_codes;
 
 fn main() {
     // Parameters.
-    let bits_per_index = 8;
+    let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
     let num_bits = 256;
     let num_features = 1_000;
     let num_items = 10_000;
     let string_length = 25;
     // Initialize bit code pool.
-    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits);
+    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits, ngram_lengths);
     // Insert some bit codes into the pool.
     for id in 0..num_items {
         let string = bit_codes::utils::random_string(string_length);
         bit_code_pool.add(&string, id);
     }
-    // Index the bit pool using multi-index hashing.
-    bit_code_pool.index(bits_per_index);
-    println!("{:?}", bit_code_pool.index_show());
 }
 ```
 
@@ -76,6 +73,7 @@ extern crate time;
 
 fn main() {
     // Parameters.
+    let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
     let num_bits = 256;
     let num_features = 100;
     let num_items = 10_000;
@@ -86,8 +84,8 @@ fn main() {
     for _ in 0..num_items {
         strings.push(bit_codes::utils::random_string(string_length));
     }
-    // Initialize bit code pool from random strings.
-    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits);
+    // Create bit code pool from random strings.
+    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits, ngram_lengths);
     for i in 0..strings.len() { bit_code_pool.add(&strings[i], i as u64); }
     // Resolve entities in bit code pool.
     let t1 = time::precise_time_s();

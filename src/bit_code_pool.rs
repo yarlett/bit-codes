@@ -20,7 +20,7 @@ pub struct BitCodePool {
 
 
 impl BitCodePool {
-    pub fn new(num_features: usize, mut num_bits: usize) -> Self {
+    pub fn new(num_features: usize, mut num_bits: usize, ngram_lengths: Vec<usize>) -> Self {
         if num_bits == 0 { num_bits = 64 };
         BitCodePool {
             bit_codes: Vec::new(),
@@ -30,7 +30,7 @@ impl BitCodePool {
             index: BitCodeIndex::new(),
             num_bits: num_bits,
             num_blocks: num_blocks_needed(num_bits),
-            random_projections: RandomProjections::new(num_features, num_bits),
+            random_projections: RandomProjections::new(num_features, num_bits, ngram_lengths),
         }
     }
 
@@ -167,7 +167,8 @@ mod tests {
 
     #[test]
     fn index_search() {
-        let mut bit_code_pool = BitCodePool::new(5, 256);
+        let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
+        let mut bit_code_pool = BitCodePool::new(5, 256, ngram_lengths);
         for id in 0..1_000 {
             let string = random_string(3);
             bit_code_pool.add(&string, id);
@@ -190,11 +191,12 @@ mod tests {
     #[test]
     fn new_bit_code_pool() {
         // Parameters.
+        let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
         let num_bits = 256;
         let num_features = 500;
         let num_bit_codes: usize = 100;
         // Make a bit code pool.
-        let mut bit_code_pool = BitCodePool::new(num_features, num_bits);
+        let mut bit_code_pool = BitCodePool::new(num_features, num_bits, ngram_lengths);
         for id in 0..(num_bit_codes as u64) {
             let string = random_string(10);
             bit_code_pool.add(&string, id);
@@ -209,7 +211,8 @@ mod tests {
     #[test]
     fn resolve_entities() {
         // Make a bit code pool.
-        let mut bit_code_pool = BitCodePool::new(100, 256);
+        let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
+        let mut bit_code_pool = BitCodePool::new(100, 256, ngram_lengths);
         for id in 0..1_000 {
             let string = random_string(10);
             bit_code_pool.add(&string, id);

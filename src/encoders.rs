@@ -35,9 +35,10 @@ mod tests {
     #[test]
     fn test_string_to_bit_code() {
         let string = "Supercalifragilisticexpialidocious";
+        let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
         let num_features = 500;
         let num_bits = 256;
-        let random_projs = RandomProjections::new(num_features, num_bits);
+        let random_projs = RandomProjections::new(num_features, num_bits, ngram_lengths);
         let bit_code_1 = string_to_bit_code(&string, &random_projs);
         let bit_code_2 = string_to_bit_code(&string, &random_projs);
         println!("{:?}", bit_code_1);
@@ -48,8 +49,9 @@ mod tests {
     #[bench]
     fn encode_string(b: &mut Bencher) {
         // Generate random string.
+        let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
         let random_string = random_string(100);
-        let random_projs = RandomProjections::new(500, 256);
+        let random_projs = RandomProjections::new(500, 256, ngram_lengths);
         // Benchmark time to encode the strings as bit codes.
         b.iter(|| {
             string_to_bit_code(&random_string, &random_projs)
