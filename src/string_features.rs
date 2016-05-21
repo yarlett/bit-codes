@@ -19,8 +19,8 @@ pub fn get_string_features(string: &str, ngram_lengths: &Vec<usize>) -> Vec<(u64
                 let mut hasher = FnvHasher::default();
                 ngram.hash(&mut hasher);
                 let hash_value = hasher.finish();
-                let weight = 1.0; // ((ngram.len() + 1) as f64).ln();
-                features.push((hash_value, weight))
+                let weight = ((ngram.len() + 1) as f64).ln();
+                features.push((hash_value, weight));
             }
         }
     }
@@ -55,7 +55,7 @@ mod tests {
         let random_string = random_string(100);
         // Benchmark iterating over the hash values of the features of the string.
         b.iter(|| {
-            let string_features = get_string_features(&random_string, &vec![2,3,4,5,6,7]);
+            let string_features = get_string_features(&random_string, &vec![2, 3, 4, 5, 6, 7]);
             let mut sum: u64 = 0;
             for (hash_value, _) in string_features { sum = sum ^ hash_value };
             sum
