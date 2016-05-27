@@ -46,6 +46,16 @@ impl BitCodePool {
         self.ids.push(id);
     }
 
+    // Return a bit code for a string, derived in the same way as bit codes in the pool.
+    pub fn bit_code(&mut self, string: &str) -> BitCode {
+        string_to_bit_code_no_allocation(
+                &string,
+                &self.random_projections,
+                &mut self.features,
+                &mut self.bools,
+        )
+    }
+
     // Get a BitCode from the pool.
     pub fn get(&self, i: usize) -> Option<&BitCode> {
         if i < self.len() {
