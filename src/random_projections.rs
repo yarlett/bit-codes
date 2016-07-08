@@ -16,13 +16,23 @@ pub struct RandomProjections {
 impl RandomProjections {
     pub fn new(dim_in: usize, dim_out: usize, ngram_lengths: Vec<usize>) -> Self {
         let vectors = get_random_projection_vectors(dim_in, dim_out);
-        RandomProjections{ dim_in: dim_in, dim_out: dim_out, ngram_lengths: ngram_lengths, vectors: vectors }
+        RandomProjections{
+            dim_in: dim_in,
+            dim_out: dim_out,
+            ngram_lengths: ngram_lengths,
+            vectors: vectors,
+        }
     }
 
     pub fn default(dim_in: usize, dim_out: usize) -> Self {
         let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
         let vectors = get_random_projection_vectors(dim_in, dim_out);
-        RandomProjections{ dim_in: dim_in, dim_out: dim_out, ngram_lengths: ngram_lengths, vectors: vectors }
+        RandomProjections{
+            dim_in: dim_in,
+            dim_out: dim_out,
+            ngram_lengths: ngram_lengths,
+            vectors: vectors,
+        }
     }
 
     #[inline]
@@ -48,7 +58,7 @@ impl RandomProjections {
     pub fn set_feature_vector(&self, string: &str, features: &mut Vec<f64>) {
         let n = features.len();
         let nu64 = n as u64;
-        let ngram_lengths = &vec![3,4,5,6,7,8];
+        let ngram_lengths = &vec![3, 4, 5, 6];
         // Reset features.
         for i in 0..n { features[i] = 0.0; }
         // Update features using (hash_value, weight) tuples.
@@ -77,7 +87,7 @@ pub fn get_random_projection_vectors(dim_in: usize, dim_out: usize) -> Vec<Vec<f
 
 #[cfg(test)]
 mod tests {
-    use super::{get_random_projection_vectors};
+    use super::{RandomProjections, get_random_projection_vectors};
 
     #[test]
     fn random_projections_generate() {
@@ -88,6 +98,19 @@ mod tests {
             for d in 0..nd {
                 assert_eq!(rps1[b][d], rps2[b][d]);
             }
+        }
+    }
+
+    #[test]
+    fn random_projections_instance() {
+        let (nd, nb) = (500, 256);
+        let ngram_lengths = vec![3, 4, 5, 6];
+        let rps = RandomProjections::new(nd, nb, ngram_lengths);
+        assert_eq!(rps.dim_in(), nd);
+        assert_eq!(rps.dim_out(), nb);
+        assert_eq!(rps.vectors.len(), nb);
+        for v in &rps.vectors {
+            assert_eq!(v.len(), nd);
         }
     }
 }
