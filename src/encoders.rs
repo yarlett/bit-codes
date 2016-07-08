@@ -1,5 +1,9 @@
 use bit_code::BitCode;
+use fnv::FnvHasher;
 use random_projections::RandomProjections;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use utils::FastHasher;
 
 
 /// Encodes an input string as a BitCode.
@@ -20,6 +24,51 @@ pub fn string_to_bit_code_no_allocation(string: &str, random_projections: &Rando
     random_projections.set_bool_vector(features, bools);
     // Make and return the bit code.
     BitCode::from_bools(bools)
+}
+
+
+pub fn string_to_bit_code_fast_encoder(
+    string: &str,
+    downcase: bool,
+    ngram_lengths: &Vec<usize>,
+    random_projections: &RandomProjections
+    ) -> BitCode {
+    let nb = random_projections.dim_out();
+    let nd = random_projections.dim_in();
+    // Get characters.
+    let chars: Vec<char> = match downcase {
+        true => string.to_lowercase().chars().collect(),
+        false => string.chars().collect(),
+    };
+    let nc = chars.len();
+    // Iterate over string features to get frequencies of features.
+    // Values are stored sparsely in a hashmap.
+    let mut features: HashMap<usize, f64, FastHasher> = HashMap::default();
+    for l in ngram_lengths {
+        if l <= &nc {
+            for pos in 0..(nc - l + 1) {
+                // Get the character ngram.
+                let ngram = &chars[pos..(pos + l)];
+                // Compute the feature value for the ngram via the hashing trick.
+                let mut hasher = FnvHasher::default();
+                ngram.hash(&mut hasher);
+                let feature = (hasher.finish() as usize) % nd;
+                //
+                let v = features.entry(feature).or_insert(0.0);
+                *v += 1.0;
+            }
+        }
+    }
+    // Compute bits via random projections.
+    let mut bitcode = BitCode::new(nb);
+    for i in 0..nb {
+        let mut acc: f64 = 0.0;
+        for (f, w) in features.iter() {
+            acc += random_projections.vectors[i][*f as usize] * w;
+        }
+        if acc > 0.0 { bitcode.set(i, true); } else { bitcode.set(i, false); };
+    }
+    bitcode
 }
 
 

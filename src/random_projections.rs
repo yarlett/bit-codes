@@ -9,7 +9,7 @@ pub struct RandomProjections {
     dim_in: usize,
     dim_out: usize,
     ngram_lengths: Vec<usize>,
-    vectors: Vec<Vec<f64>>,
+    pub vectors: Vec<Vec<f64>>,
 }
 
 
