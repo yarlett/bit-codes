@@ -1,6 +1,8 @@
 use rand::distributions::IndependentSample;
 use rand::distributions::normal::Normal;
 use rand::isaac::{Isaac64Rng};
+use std::collections::HashMap;
+use utils::FastHasher;
 
 
 #[derive(Debug)]
@@ -9,7 +11,7 @@ pub struct EncodingOptions {
     ngram_lengths: Vec<usize>,
     num_bits: usize,
     num_features: usize,
-    pub random_projections: Vec<Vec<f64>>,
+    random_projections: Vec<Vec<f64>>,
 }
 
 
@@ -50,16 +52,25 @@ impl EncodingOptions {
 
     #[inline]
     pub fn num_features(&self) -> usize { self.num_features }
+
+    #[inline]
+    pub fn project(&self, features: &HashMap<usize, f64, FastHasher>, bit: usize) -> bool {
+        let mut acc: f64 = 0.0;
+        for (f, w) in features.iter() {
+            acc += self.random_projections[bit][*f] * w;
+        }
+        if acc > 0.0 { true } else { false }
+    }
 }
 
 
-pub fn get_random_projection_vectors(dim_in: usize, dim_out: usize) -> Vec<Vec<f64>> {
+pub fn get_random_projection_vectors(num_features: usize, num_bits: usize) -> Vec<Vec<f64>> {
     let mut rng = Isaac64Rng::new_unseeded();
     let normal = Normal::new(0.0, 1.0);
-    let mut vectors: Vec<Vec<f64>> = Vec::new();
-    for _ in 0..dim_out {
-        let mut v: Vec<f64> = vec![0.0; dim_in];
-        for i in 0..dim_in {
+    let mut vectors: Vec<Vec<f64>> = Vec::with_capacity(num_bits);
+    for _ in 0..num_bits {
+        let mut v: Vec<f64> = vec![0.0; num_features];
+        for i in 0..num_features {
             v[i] = normal.ind_sample(&mut rng);
         }
         vectors.push(v);
@@ -74,12 +85,12 @@ mod tests {
 
     #[test]
     fn random_projections() {
-        let (nd, nb) = (500, 256);
-        let rps1 = get_random_projection_vectors(nd, nb);
-        let rps2 = get_random_projection_vectors(nd, nb);
+        let (nf, nb) = (500, 256);
+        let rps1 = get_random_projection_vectors(nf, nb);
+        let rps2 = get_random_projection_vectors(nf, nb);
         for b in 0..nb {
-            for d in 0..nd {
-                assert_eq!(rps1[b][d], rps2[b][d]);
+            for f in 0..nf {
+                assert_eq!(rps1[b][f], rps2[b][f]);
             }
         }
     }
