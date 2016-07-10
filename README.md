@@ -19,18 +19,24 @@ extern crate bit_codes;
 
 fn main() {
     let string = "Supercalifragilisticexpialidocious";
-    let num_features = 500;
+    let downcase = true;
+    let ngram_lengths = vec![3, 4, 5, 6];
     let num_bits = 256;
-    let random_projs = bit_codes::random_projections::RandomProjections::default(num_features, num_bits);
-    let bit_code = bit_codes::encoders::string_to_bit_code(&string, &random_projs);
+    let num_features = 500;
+    let encoding_options = bit_codes::encoding_options::EncodingOptions::new(
+        downcase,
+        ngram_lengths,
+        num_bits,
+        num_features,
+    );
+    let bit_code = bit_codes::encoding::string_to_bit_code(&string, &encoding_options);
     println!("{:?}", bit_code);
-}
-```
+}```
 
 The resulting bit code will be represented by 4 64-bit unsigned integers:
 
 ```rust
-BitCode { blocks: [7362129119163033604, 18080254231187725207, 2073496217670817622, 15739700542835670175] }
+BitCode { blocks: [3873682049634234218, 631966384541388943, 951393676992109676, 5760212978568696118] }
 ```
 
 ### Creating A Bit Code Pool
@@ -44,13 +50,11 @@ extern crate bit_codes;
 
 fn main() {
     // Parameters.
-    let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
-    let num_bits = 256;
-    let num_features = 1_000;
+    let encoding_options = bit_codes::encoding_options::EncodingOptions::default();
     let num_items = 10_000;
     let string_length = 25;
     // Initialize bit code pool.
-    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits, ngram_lengths);
+    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(encoding_options);
     // Insert some bit codes into the pool.
     for id in 0..num_items {
         let string = bit_codes::utils::random_string(string_length);
@@ -73,11 +77,12 @@ extern crate time;
 
 fn main() {
     // Parameters.
-    let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
-    let num_bits = 256;
-    let num_features = 100;
-    let num_items = 10_000;
-    let radius = 50;
+    let downcase = true;
+    let ngram_lengths = vec![1, 2, 3, 4, 5];
+    let num_bits = 128;
+    let num_features = 1_000;
+    let num_items = 50_000;
+    let radius = 25;
     let string_length = 5;
     // Create random strings.
     let mut strings: Vec<String> = Vec::new();
@@ -85,7 +90,8 @@ fn main() {
         strings.push(bit_codes::utils::random_string(string_length));
     }
     // Create bit code pool from random strings.
-    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits, ngram_lengths);
+    let encoding_options = bit_codes::encoding_options::EncodingOptions::new(downcase, ngram_lengths, num_bits, num_features);
+    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(encoding_options);
     for i in 0..strings.len() { bit_code_pool.add(&strings[i], i as u64); }
     // Resolve entities in bit code pool.
     let t1 = time::precise_time_s();
@@ -105,38 +111,83 @@ fn main() {
 The code generates output like that shown below. As can be seen, it successfully identifies random strings that are unusually similar to one another. In a real application these strings could refer to similar or identical entities.
 
 ```
-"dcKoq"
-"YckOQ"
+"8VZWO"
+"8vzWo"
 
-"UrhEg"
-"uRHeg"
+"oCal1"
+"OcaL1"
 
-"AHHhK"
-"qaHhh"
+"JOGLe"
+"JOgLe"
 
-"YPrHU"
-"UPRhu"
+"rUQqi"
+"YRuqq"
 
-"ZplSl"
-"ZnPls"
+"3hsGI"
+"3HSgi"
 
-"lyfh9"
-"Yfh9d"
+"SQCWo"
+"osQCW"
 
-"6mFdd"
-"QMFDd"
+"IF1u4"
+"if1U4"
 
-"GRanq"
-"Gran0"
+"FOyPj"
+"fOYPJ"
 
-"Upekk"
-"PekkD"
+"QFlL9"
+"lqfll"
 
-"9XxzI"
-"jXxZI"
+"PPcEa"
+"PpCea"
 
-"HldDD"
-"hdDhV"
+"3gzsL"
+"3gZsL"
 
-Resolved entities into 9989 entity sets of bit code pool in 1.486s.
+"ZFzOl"
+"zfzol"
+
+"y1jai"
+"y1Jai"
+
+"KVvek"
+"kVveK"
+
+"pkzzB"
+"pkZZb"
+
+"UaOhy"
+"uaoHy"
+
+"5oaSb"
+"5oasb"
+
+"QCg9E"
+"qCG9g"
+
+"6Pxua"
+"6PxUA"
+
+"d2RBV"
+"D2RBV"
+
+"8uopm"
+"SuOpM"
+
+"Vg8HM"
+"vG8hm"
+
+"XnTUi"
+"xNtUi"
+
+"OHbdI"
+"OhbDi"
+
+"wrl7c"
+"4N7bI"
+
+"IwC43"
+"IWC43"
+
+Resolved entities into 49974 entity sets of bit code pool in 30.113s.
 ```

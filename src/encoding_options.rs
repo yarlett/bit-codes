@@ -56,8 +56,9 @@ impl EncodingOptions {
     #[inline]
     pub fn project(&self, features: &HashMap<usize, f64, FastHasher>, bit: usize) -> bool {
         let mut acc: f64 = 0.0;
-        for (f, w) in features.iter() {
-            acc += self.random_projections[bit][*f] * w;
+        let vector = &self.random_projections[bit];
+        for (feature, frequency) in features.iter() {
+            acc += vector[*feature] * frequency;
         }
         if acc > 0.0 { true } else { false }
     }
@@ -67,7 +68,7 @@ impl EncodingOptions {
 pub fn get_random_projection_vectors(num_features: usize, num_bits: usize) -> Vec<Vec<f64>> {
     let mut rng = Isaac64Rng::new_unseeded();
     let normal = Normal::new(0.0, 1.0);
-    let mut vectors: Vec<Vec<f64>> = Vec::with_capacity(num_bits);
+    let mut vectors: Vec<Vec<f64>> = Vec::new();//#(num_bits);
     for _ in 0..num_bits {
         let mut v: Vec<f64> = vec![0.0; num_features];
         for i in 0..num_features {

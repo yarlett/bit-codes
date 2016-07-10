@@ -4,11 +4,11 @@ extern crate time;
 fn main() {
     // Parameters.
     let downcase = true;
-    let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
-    let num_bits = 256;
-    let num_features = 100;
-    let num_items = 10_000;
-    let radius = 50;
+    let ngram_lengths = vec![1, 2, 3, 4, 5];
+    let num_bits = 128;
+    let num_features = 1_000;
+    let num_items = 50_000;
+    let radius = 25;
     let string_length = 5;
     // Create random strings.
     let mut strings: Vec<String> = Vec::new();

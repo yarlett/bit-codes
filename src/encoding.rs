@@ -19,6 +19,7 @@ pub fn string_to_bit_code(string: &str, encoding_options: &EncodingOptions) -> B
     let mut features: HashMap<usize, f64, FastHasher> = HashMap::default();
     for l in encoding_options.ngram_lengths() {
         if l <= &nc {
+            let inc = *l as f64;
             for pos in 0..(nc - l + 1) {
                 let ngram = &chars[pos..(pos + l)];
                 // Compute the feature value for the ngram via the hashing trick.
@@ -26,16 +27,14 @@ pub fn string_to_bit_code(string: &str, encoding_options: &EncodingOptions) -> B
                 ngram.hash(&mut hasher);
                 let feature = hasher.finish() % nd;
                 // Update the feature frequencies.
-                let v = features.entry(feature as usize).or_insert(0.0);
-                *v += 1.0;
+                let frequency = features.entry(feature as usize).or_insert(0.0);
+                *frequency += inc;
             }
         }
     }
     // Compute bits via random projections.
     let mut bitcode = BitCode::new(nb);
-    for b in 0..nb {
-        bitcode.set(b, encoding_options.project(&features, b));
-    }
+    for b in 0..nb { bitcode.set(b, encoding_options.project(&features, b)); }
     bitcode
 }
 
