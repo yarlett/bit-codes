@@ -86,14 +86,15 @@ mod tests {
 
     #[test]
     fn encoding_options() {
-        let (nd, nb) = (500, 256);
+        let downcase = true;
+        let (nf, nb) = (500, 256);
         let ngram_lengths = vec![3, 4, 5, 6];
-        let rps = EncodingOptions::new(nd, nb, ngram_lengths);
-        assert_eq!(rps.dim_in(), nd);
-        assert_eq!(rps.dim_out(), nb);
-        assert_eq!(rps.vectors.len(), nb);
-        for v in &rps.vectors {
-            assert_eq!(v.len(), nd);
+        let encoding_options = EncodingOptions::new(downcase, ngram_lengths, nb, nf);
+        assert_eq!(encoding_options.num_bits(), nb);
+        assert_eq!(encoding_options.num_features(), nf);
+        assert_eq!(encoding_options.random_projections.len(), nb);
+        for v in &encoding_options.random_projections {
+            assert_eq!(v.len(), nf);
         }
     }
 }

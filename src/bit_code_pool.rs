@@ -76,6 +76,10 @@ impl BitCodePool {
         println!("{:?}", self.index);
     }
 
+    pub fn num_bits(&self) -> usize {
+        self.encoding_options.num_bits()
+    }
+
     pub fn resolve_entities(&self, radius: u32) -> Vec<Vec<usize>> {
         // Initialize indices of bit codes to search through.
         let mut population: HashSet<usize, FastHasher> = HashSet::with_capacity_and_hasher(self.len(), FastHasher::default());
@@ -198,17 +202,14 @@ mod tests {
             bit_code_pool.add(&string, id);
         }
         // Test.
-        assert_eq!(bit_code_pool.num_bits, num_bits);
-        assert_eq!(bit_code_pool.bools.len(), num_bits);
-        assert_eq!(bit_code_pool.features.len(), num_features);
+        assert_eq!(bit_code_pool.num_bits(), num_bits);
         assert_eq!(bit_code_pool.bit_codes.len(), num_bit_codes);
     }
 
     #[test]
     fn resolve_entities() {
         // Make a bit code pool.
-        let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
-        let mut bit_code_pool = BitCodePool::new(100, 256, ngram_lengths);
+        let mut bit_code_pool = BitCodePool::new(EncodingOptions::default());
         for id in 0..1_000 {
             let string = random_string(10);
             bit_code_pool.add(&string, id);
