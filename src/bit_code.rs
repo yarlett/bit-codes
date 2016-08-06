@@ -1,5 +1,5 @@
-//use encoders::string_to_feature_vector;
-use random_projections::RandomProjections;
+use encoding::string_to_bit_code;
+use encoding_options::EncodingOptions;
 use std::cmp::min;
 use utils::{get_num_indexes, num_blocks_needed};
 
@@ -38,15 +38,8 @@ impl BitCode {
         bc
     }
 
-    pub fn from_string(string: &str, random_projections: RandomProjections) -> Self {
-        // Get feature vector from string.
-        let mut features = vec![0.0; random_projections.dim_in()];
-        random_projections.set_feature_vector(string, &mut features);
-        // Get bools via random projections.
-        let mut bools = vec![false; random_projections.dim_out()];
-        random_projections.set_bool_vector(&features, &mut bools);
-        // Create and return the BitCode.
-        BitCode::from_bools(&bools)
+    pub fn from_string(string: &str, encoding_options: &EncodingOptions) -> Self {
+        string_to_bit_code(string, encoding_options)
     }
 
     // Methods.

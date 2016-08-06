@@ -7,6 +7,7 @@ use rand::distributions::IndependentSample;
 fn main() {
     // Parameters.
     let bits_per_index = 10;
+    let downcase = true;
     let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
     let num_bits = 256;
     let num_features = 1_000;
@@ -20,9 +21,16 @@ fn main() {
     let t2 = time::precise_time_s();
     let t_s = format!("{:.*}", 3, t2 - t1);
     println!("{:} random strings created in {:}s.", num_items, t_s);
+    // Create encoding options.
+    let encoding_options = bit_codes::encoding_options::EncodingOptions::new(
+        downcase,
+        ngram_lengths,
+        num_bits,
+        num_features,
+    );
     // Create bit code pool from random strings.
     let t1 = time::precise_time_s();
-    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(num_features, num_bits, ngram_lengths);
+    let mut bit_code_pool = bit_codes::bit_code_pool::BitCodePool::new(encoding_options);
     for i in 0..strings.len() { bit_code_pool.add(&strings[i], i as u64); }
     let t2 = time::precise_time_s();
     let t_s = format!("{:.*}", 3, t2 - t1);

@@ -1,7 +1,7 @@
 use bit_code::BitCode;
 use bit_code_index::BitCodeIndex;
-use encoders::string_to_bit_code_no_allocation;
-use random_projections::RandomProjections;
+use encoding::string_to_bit_code;
+use encoding_options::EncodingOptions;
 use std::collections::HashSet;
 use utils::{get_num_indexes, num_blocks_needed, FastHasher};
 
@@ -9,51 +9,34 @@ use utils::{get_num_indexes, num_blocks_needed, FastHasher};
 #[derive(Debug)]
 pub struct BitCodePool {
     bit_codes: Vec<BitCode>,                // Bit codes in the pool.
-    bools: Vec<bool>,                       // Bool storage to compute bit codes.
-    features: Vec<f64>,                     // Feature storage to compute bit codes.
     ids: Vec<u64>,                          // Identifiers associated with bit codes (e.g. primary keys in database representation).
     index: BitCodeIndex,                    // Multi-index to enable sublinear-time searching.
-    num_bits: usize,                        // Number of bits in bit codes.
     num_blocks: usize,                      // Number of u64 blocks in bit codes.
-    random_projections: RandomProjections,  // Random projections used to convert features to bits.
+    encoding_options: EncodingOptions,
 }
 
 
 impl BitCodePool {
-    pub fn new(num_features: usize, mut num_bits: usize, ngram_lengths: Vec<usize>) -> Self {
-        if num_bits == 0 { num_bits = 64 };
+    pub fn new(encoding_options: EncodingOptions) -> Self {
         BitCodePool {
             bit_codes: Vec::new(),
-            bools: vec![false; num_bits],
-            features: vec![0.0; num_features],
             ids: Vec::new(),
             index: BitCodeIndex::new(),
-            num_bits: num_bits,
-            num_blocks: num_blocks_needed(num_bits),
-            random_projections: RandomProjections::new(num_features, num_bits, ngram_lengths),
+            num_blocks: num_blocks_needed(encoding_options.num_bits()),
+            encoding_options: encoding_options,
         }
     }
 
     // Add a bit code created from a string to the pool.
     pub fn add(&mut self, string: &str, id: u64) {
-        let bit_code = string_to_bit_code_no_allocation(
-                &string,
-                &self.random_projections,
-                &mut self.features,
-                &mut self.bools,
-        );
+        let bit_code = string_to_bit_code(&string, &self.encoding_options);
         self.bit_codes.push(bit_code);
         self.ids.push(id);
     }
 
     // Return a bit code for a string, derived in the same way as bit codes in the pool.
-    pub fn bit_code(&mut self, string: &str) -> BitCode {
-        string_to_bit_code_no_allocation(
-                &string,
-                &self.random_projections,
-                &mut self.features,
-                &mut self.bools,
-        )
+    pub fn bit_code(&self, string: &str) -> BitCode {
+        string_to_bit_code(&string, &self.encoding_options)
     }
 
     // Get a BitCode from the pool.
@@ -78,9 +61,9 @@ impl BitCodePool {
     // Set multi-index on the bit codes currently in the pool.
     pub fn index(&mut self, mut bits_per_index: usize) {
         if bits_per_index == 0 { bits_per_index = 1; }
-        if bits_per_index > self.num_bits { bits_per_index = self.num_bits }
+        if bits_per_index > self.encoding_options.num_bits() { bits_per_index = self.encoding_options.num_bits() }
         // Number of indexes.
-        let num_indexes = get_num_indexes(self.num_bits, bits_per_index);
+        let num_indexes = get_num_indexes(self.encoding_options.num_bits(), bits_per_index);
         // Construct index.
         self.index.init(bits_per_index, num_indexes);
         for (i, bit_code) in self.bit_codes.iter().enumerate() {
@@ -91,6 +74,10 @@ impl BitCodePool {
 
     pub fn index_show(&self) {
         println!("{:?}", self.index);
+    }
+
+    pub fn num_bits(&self) -> usize {
+        self.encoding_options.num_bits()
     }
 
     pub fn resolve_entities(&self, radius: u32) -> Vec<Vec<usize>> {
@@ -173,12 +160,13 @@ impl SearchResult {
 #[cfg(test)]
 mod tests {
     use super::BitCodePool;
+    use encoding_options::EncodingOptions;
     use utils::random_string;
 
     #[test]
     fn index_search() {
-        let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
-        let mut bit_code_pool = BitCodePool::new(5, 256, ngram_lengths);
+        let encoding_options = EncodingOptions::default();
+        let mut bit_code_pool = BitCodePool::new(encoding_options);
         for id in 0..1_000 {
             let string = random_string(3);
             bit_code_pool.add(&string, id);
@@ -201,28 +189,27 @@ mod tests {
     #[test]
     fn new_bit_code_pool() {
         // Parameters.
+        let downcase = true;
         let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
         let num_bits = 256;
         let num_features = 500;
+        let encoding_options = EncodingOptions::new(downcase, ngram_lengths, num_bits, num_features);
         let num_bit_codes: usize = 100;
         // Make a bit code pool.
-        let mut bit_code_pool = BitCodePool::new(num_features, num_bits, ngram_lengths);
+        let mut bit_code_pool = BitCodePool::new(encoding_options);
         for id in 0..(num_bit_codes as u64) {
             let string = random_string(10);
             bit_code_pool.add(&string, id);
         }
         // Test.
-        assert_eq!(bit_code_pool.num_bits, num_bits);
-        assert_eq!(bit_code_pool.bools.len(), num_bits);
-        assert_eq!(bit_code_pool.features.len(), num_features);
+        assert_eq!(bit_code_pool.num_bits(), num_bits);
         assert_eq!(bit_code_pool.bit_codes.len(), num_bit_codes);
     }
 
     #[test]
     fn resolve_entities() {
         // Make a bit code pool.
-        let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
-        let mut bit_code_pool = BitCodePool::new(100, 256, ngram_lengths);
+        let mut bit_code_pool = BitCodePool::new(EncodingOptions::default());
         for id in 0..1_000 {
             let string = random_string(10);
             bit_code_pool.add(&string, id);
