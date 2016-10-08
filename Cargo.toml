@@ -4,6 +4,7 @@ version = "0.1.1"
 authors = ["Daniel Yarlett <daniel.yarlett@gmail.com>"]
 
 [dependencies]
-fnv = "*"
-rand = "*"
-time = "*"
+bit-vec = "0.4.3"
+fnv = "1.0.5"
+rand = "0.3.14"
+time = "0.1.35"
