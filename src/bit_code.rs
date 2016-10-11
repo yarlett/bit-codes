@@ -50,8 +50,6 @@ impl BitCode {
             n += block.count_ones();
         }
         n
-        // Alternative method worth benchmarking:
-        // self.bits.iter().filter(|x| *x).count()
     }
 
     #[inline]
@@ -179,7 +177,6 @@ mod tests {
         let bc1 = BitCode::from_bool_string("010101010101");
         assert_eq!(bc1.hamming_distance(&bc1), 0);
         let bc2 = BitCode::from_bool_string("101010101010");
-        assert_eq!(bc1.hamming_distance(&bc1), 0);
         assert_eq!(bc2.hamming_distance(&bc2), 0);
         assert_eq!(bc1.hamming_distance(&bc2), 12);
     }
