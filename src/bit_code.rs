@@ -18,38 +18,31 @@ impl BitCode {
     }
 
     pub fn from_bools(bools: &Vec<bool>) -> Self {
-        let mut bc = BitCode{ bits: BitVec::from_elem(bools.len(), false) };
+        let mut bits = BitVec::from_elem(bools.len(), false);
         for (i, b) in bools.iter().enumerate() {
-            bc.set(i, *b);
+            bits.set(i, *b);
         }
-        bc
+        BitCode{ bits: bits }
     }
 
-    pub fn from_bool_string(string: &str) -> Self {
-        let mut bools: Vec<bool> = Vec::new();
-        for c in string.chars() {
-            if c == '1' { bools.push(true); } else { bools.push(false); };
+    pub fn from_bit_string(string: &str) -> Self {
+        let mut bits = BitVec::from_elem(string.len(), false);
+        for (i, c) in string.chars().enumerate() {
+            if c == '1' { bits.set(i, true); }
+            else { bits.set(i, false); }
         }
-        let mut bc = BitCode{ bits: BitVec::from_elem(bools.len(), false) };
-        for (i, b) in bools.iter().enumerate() {
-            bc.set(i, *b);
-        }
-        bc
+        BitCode{ bits: bits }
     }
 
     pub fn from_string(string: &str, encoding_options: &EncodingOptions) -> Self {
         string_to_bit_code(string, encoding_options)
     }
 
-    // Methods.
-
     #[inline]
-    pub fn count_ones(&self) -> u32 {
+    pub fn count_ones(&self) -> usize {
         let mut n = 0;
-        for block in self.bits.storage() {
-            n += block.count_ones();
-        }
-        n
+        for block in self.bits.storage() { n += block.count_ones(); }
+        n as usize
     }
 
     #[inline]
@@ -58,12 +51,12 @@ impl BitCode {
     }
 
     #[inline]
-    pub fn hamming_distance(&self, other: &BitCode) -> u32 {
-        let mut d: u32 = 0;
+    pub fn hamming_distance(&self, other: &BitCode) -> usize {
+        let mut d: usize = 0;
         let storage1 = self.bits.storage();
         let storage2 = other.bits.storage();
         for i in 0..min(storage1.len(), storage2.len()) {
-            d += (storage1[i] ^ storage2[i]).count_ones();
+            d += (storage1[i] ^ storage2[i]).count_ones() as usize;
         }
         d
     }
@@ -129,7 +122,7 @@ mod tests {
 
     #[test]
     fn multi_index_values() {
-        let bc = BitCode::from_bool_string("010101010101");
+        let bc = BitCode::from_bit_string("010101010101");
         let keys = bc.multi_index_values(4);
         assert_eq!(keys.len(), 3);
         let keys = bc.multi_index_values(10);
@@ -138,7 +131,7 @@ mod tests {
 
     #[test]
     fn new_bit_code_from_bool_string() {
-        let bc = BitCode::from_bool_string("010101010101");
+        let bc = BitCode::from_bit_string("010101010101");
         assert_eq!(bc.len(), 12);
         assert_eq!(bc.count_ones(), 6);
         assert_eq!(bc.hamming_distance(&bc), 0);
@@ -161,22 +154,22 @@ mod tests {
 
     #[test]
     fn bit_codes_are_equal() {
-        let bc1 = BitCode::from_bool_string("010101010101");
+        let bc1 = BitCode::from_bit_string("010101010101");
         let bc2 = BitCode::from_bools(&vec![false, true, false, true, false, true, false, true, false, true, false, true]);
         assert_eq!(bc1.hamming_distance(&bc2), 0);
     }
 
     #[test]
     fn new_bit_code_from_random_string() {
-        let bc = BitCode::from_bool_string(&random_bit_string(256));
+        let bc = BitCode::from_bit_string(&random_bit_string(256));
         assert_eq!(bc.len(), 256);
     }
 
     #[test]
     fn hamming_distance() {
-        let bc1 = BitCode::from_bool_string("010101010101");
+        let bc1 = BitCode::from_bit_string("010101010101");
         assert_eq!(bc1.hamming_distance(&bc1), 0);
-        let bc2 = BitCode::from_bool_string("101010101010");
+        let bc2 = BitCode::from_bit_string("101010101010");
         assert_eq!(bc2.hamming_distance(&bc2), 0);
         assert_eq!(bc1.hamming_distance(&bc2), 12);
     }

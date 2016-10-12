@@ -38,7 +38,7 @@ fn main() {
     // Create index on the bit code pool.
     let t1 = time::precise_time_s();
     bit_code_pool.index(bits_per_index);
-    let max_radius = bit_code_pool.index_max_searchable_radius() as u32;
+    let max_radius = bit_code_pool.index_max_searchable_radius();
     let t2 = time::precise_time_s();
     let t_s = format!("{:.*}", 3, t2 - t1);
     println!("Bit code index created in {:}s (max searchable radius is {:}).", t_s, max_radius);
