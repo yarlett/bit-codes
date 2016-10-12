@@ -66,20 +66,41 @@ impl BitCode {
         self.bits.len()
     }
 
-    pub fn multi_index_values(&self, mut bits_per_index: usize) -> Vec<u64> {
-        if bits_per_index < 1 { bits_per_index = 1 };
-        // Calculate number of indexes.
+    pub fn index_values(&self, mut index_length: usize) -> Vec<BitVec> {
         let num_bits = self.len();
-        let num_indexes = get_num_indexes(num_bits, bits_per_index);
-        // Iterate over bits setting index values.
-        let mut index_values: Vec<u64> = vec![0; num_indexes];
-        for i in 0..num_bits {
-            let index_num = i / bits_per_index;
-            let position_num = i % bits_per_index;
-            if self.get(i).unwrap() { index_values[index_num] |= 1 << position_num } ;
+        // Ensure bits per index is within required range.
+        if index_length < 1 { index_length = 1; };
+        if index_length > num_bits { index_length = num_bits; };
+        // Compute number of indexes required.
+        let num_indexes = get_num_indexes(num_bits, index_length);
+        // Set index values.
+        let mut index_values = Vec::new();
+        for i in 0..num_indexes {
+            let mut index_value = BitVec::from_elem(index_length, false);
+            for j in (i * index_length)..((i + 1) * index_length) {
+                if j < num_bits {
+                    index_value.push(self.get(j).unwrap());
+                }
+            }
+            index_values.push(index_value)
         }
         index_values
     }
+
+    // pub fn index_values(&self, mut bits_per_index: usize) -> Vec<u64> {
+    //     if bits_per_index < 1 { bits_per_index = 1 };
+    //     // Calculate number of indexes.
+    //     let num_bits = self.len();
+    //     let num_indexes = get_num_indexes(num_bits, bits_per_index);
+    //     // Iterate over bits setting index values.
+    //     let mut index_values: Vec<u64> = vec![0; num_indexes];
+    //     for i in 0..num_bits {
+    //         let index_num = i / bits_per_index;
+    //         let position_num = i % bits_per_index;
+    //         if self.get(i).unwrap() { index_values[index_num] |= 1 << position_num } ;
+    //     }
+    //     index_values
+    // }
 
     #[inline]
     pub fn set(&mut self, bit_number: usize, value: bool) {
@@ -121,11 +142,11 @@ mod tests {
     }
 
     #[test]
-    fn multi_index_values() {
+    fn index_values() {
         let bc = BitCode::from_bit_string("010101010101");
-        let keys = bc.multi_index_values(4);
+        let keys = bc.index_values(4);
         assert_eq!(keys.len(), 3);
-        let keys = bc.multi_index_values(10);
+        let keys = bc.index_values(10);
         assert_eq!(keys.len(), 2);
     }
 

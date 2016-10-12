@@ -67,7 +67,7 @@ impl BitCodePool {
         // Construct index.
         self.index.init(bits_per_index, num_indexes);
         for (i, bit_code) in self.bit_codes.iter().enumerate() {
-            let index_values = bit_code.multi_index_values(bits_per_index);
+            let index_values = bit_code.index_values(bits_per_index);
             self.index.add(&index_values, i);
         }
     }
@@ -131,7 +131,7 @@ impl BitCodePool {
         // Check index is valid for search.
         if (radius as usize) > self.index.max_searchable_radius() { return None; };
         // Perform index search.
-        let needle_index_values = needle.multi_index_values(self.index.bits_per_index());
+        let needle_index_values = needle.index_values(self.index.index_length());
         let candidate_indices = &self.index.candidate_indices(&needle_index_values);
         let mut indices: Vec<usize> = Vec::new();
         for c in candidate_indices {
