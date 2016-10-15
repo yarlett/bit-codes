@@ -45,6 +45,7 @@ impl EncodingOptions {
     #[inline]
     pub fn downcase(&self) -> bool { self.downcase }
 
+    #[inline]
     pub fn ngram_lengths(&self) -> &Vec<usize> { &self.ngram_lengths }
 
     #[inline]

@@ -79,28 +79,13 @@ impl BitCode {
             let mut index_value = BitVec::from_elem(index_length, false);
             for j in (i * index_length)..((i + 1) * index_length) {
                 if j < num_bits {
-                    index_value.push(self.get(j).unwrap());
+                    index_value.set(j - (i * index_length), self.get(j).unwrap());
                 }
             }
             index_values.push(index_value)
         }
         index_values
     }
-
-    // pub fn index_values(&self, mut bits_per_index: usize) -> Vec<u64> {
-    //     if bits_per_index < 1 { bits_per_index = 1 };
-    //     // Calculate number of indexes.
-    //     let num_bits = self.len();
-    //     let num_indexes = get_num_indexes(num_bits, bits_per_index);
-    //     // Iterate over bits setting index values.
-    //     let mut index_values: Vec<u64> = vec![0; num_indexes];
-    //     for i in 0..num_bits {
-    //         let index_num = i / bits_per_index;
-    //         let position_num = i % bits_per_index;
-    //         if self.get(i).unwrap() { index_values[index_num] |= 1 << position_num } ;
-    //     }
-    //     index_values
-    // }
 
     #[inline]
     pub fn set(&mut self, bit_number: usize, value: bool) {
@@ -111,6 +96,7 @@ impl BitCode {
 
 #[cfg(test)]
 mod tests {
+    use bit_vec::BitVec;
     use super::BitCode;
     use utils::random_bit_string;
 
@@ -143,11 +129,24 @@ mod tests {
 
     #[test]
     fn index_values() {
-        let bc = BitCode::from_bit_string("010101010101");
-        let keys = bc.index_values(4);
-        assert_eq!(keys.len(), 3);
-        let keys = bc.index_values(10);
-        assert_eq!(keys.len(), 2);
+        // Test that index values are what they should be.
+        let bools = vec![true, false, true, false, true, false, true, false, true, false, true, true];
+        let bc = BitCode::from_bools(&bools);
+        let ivs1 = bc.index_values(4);
+        let ivs1_correct = vec![
+            BitVec::from_fn(4, |i| { vec![true, false, true, false][i] }),
+            BitVec::from_fn(4, |i| { vec![true, false, true, false][i] }),
+            BitVec::from_fn(4, |i| { vec![true, false, true, true][i] }),
+        ];
+        assert_eq!(ivs1.len(), ivs1_correct.len());
+        assert_eq!(ivs1, ivs1_correct);
+        let ivs2 = bc.index_values(10);
+        let ivs2_correct = vec![
+            BitVec::from_fn(10, |i| { vec![true, false, true, false, true, false, true, false, true, false][i] }),
+            BitVec::from_fn(10, |i| { vec![true, true, false, false, false, false, false, false, false, false][i] }),
+        ];
+        assert_eq!(ivs2.len(), ivs2_correct.len());
+        assert_eq!(ivs2, ivs2_correct);
     }
 
     #[test]
