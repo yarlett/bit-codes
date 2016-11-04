@@ -12,7 +12,7 @@ We believe this library will have application to the problems of data de-duplica
 
 ### Creating BitCodes
 
-The following example shows how a string description of some entity can be converted into a 256-bit bit code. Internally the bit codes are packed into a vector of u64s so they use minimal space.
+The following example shows how a string description of some entity can be converted into a 256-bit bit code. Internally the bit codes are packed into a vector of byte blocks so they use minimal space.
 
 ```rust
 extern crate bit_codes;
@@ -33,10 +33,10 @@ fn main() {
     println!("{:?}", bit_code);
 }```
 
-The resulting bit code will be represented by 4 64-bit unsigned integers:
+The bits in the resulting bit code will be represented by a series of bytes:
 
 ```rust
-BitCode { blocks: [3873682049634234218, 631966384541388943, 951393676992109676, 5760212978568696118] }
+BitCode { bits: 0111010011110110100000101011011100110010101110010100001110111100111100010011100110001001001010100111100001001100101000111001000000110110001110110101010101110100010000011110000000101100101110000110100010001001011101000100011011110100110001110000111111110010 }
 ```
 
 ### Creating A Bit Code Pool

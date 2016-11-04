@@ -67,7 +67,7 @@ impl BitCodePool {
         // Construct index.
         self.index.init(bits_per_index, num_indexes);
         for (i, bit_code) in self.bit_codes.iter().enumerate() {
-            let index_values = bit_code.multi_index_values(bits_per_index);
+            let index_values = bit_code.index_values(bits_per_index);
             self.index.add(&index_values, i);
         }
     }
@@ -80,7 +80,7 @@ impl BitCodePool {
         self.encoding_options.num_bits()
     }
 
-    pub fn resolve_entities(&self, radius: u32) -> Vec<Vec<usize>> {
+    pub fn resolve_entities(&self, radius: usize) -> Vec<Vec<usize>> {
         // Initialize indices of bit codes to search through.
         let mut population: HashSet<usize, FastHasher> = HashSet::with_capacity_and_hasher(self.len(), FastHasher::default());
         for i in 0..self.len() { population.insert(i); }
@@ -99,7 +99,7 @@ impl BitCodePool {
     }
 
     /// Returns the indices of bit codes with Hamming distance <= radius from the needle.
-    pub fn search(&self, needle: &BitCode, radius: u32) -> Vec<usize> {
+    pub fn search(&self, needle: &BitCode, radius: usize) -> Vec<usize> {
         let mut indices: Vec<usize> = Vec::new();
         for i in 0..self.bit_codes.len() {
             if self.bit_codes[i].hamming_distance(&needle) <= radius { indices.push(i); }
@@ -127,11 +127,11 @@ impl BitCodePool {
     }
 
     /// Returns the indices of bit codes with Hamming distance <= radius from the needle using indexed search.
-    pub fn search_with_index(&self, needle: &BitCode, radius: u32) -> Option<Vec<usize>> {
+    pub fn search_with_index(&self, needle: &BitCode, radius: usize) -> Option<Vec<usize>> {
         // Check index is valid for search.
         if (radius as usize) > self.index.max_searchable_radius() { return None; };
         // Perform index search.
-        let needle_index_values = needle.multi_index_values(self.index.bits_per_index());
+        let needle_index_values = needle.index_values(self.index.index_length());
         let candidate_indices = &self.index.candidate_indices(&needle_index_values);
         let mut indices: Vec<usize> = Vec::new();
         for c in candidate_indices {
@@ -144,23 +144,26 @@ impl BitCodePool {
 
 pub struct SearchResult {
     idx: usize,
-    distance: u32,
+    distance: usize,
 }
 
+
 impl SearchResult {
-    pub fn by_distance(&self) -> u32 {
+    pub fn by_distance(&self) -> usize {
         self.distance
     }
 
-    pub fn distance(&self) -> u32 { self.distance }
+    pub fn distance(&self) -> usize { self.distance }
 
     pub fn idx(&self) -> usize { self.idx }
 }
+
 
 #[cfg(test)]
 mod tests {
     use super::BitCodePool;
     use encoding_options::EncodingOptions;
+    use test::Bencher;
     use utils::random_string;
 
     #[test]
@@ -187,26 +190,6 @@ mod tests {
     }
 
     #[test]
-    fn new_bit_code_pool() {
-        // Parameters.
-        let downcase = true;
-        let ngram_lengths = vec![3, 4, 5, 6, 7, 8];
-        let num_bits = 256;
-        let num_features = 500;
-        let encoding_options = EncodingOptions::new(downcase, ngram_lengths, num_bits, num_features);
-        let num_bit_codes: usize = 100;
-        // Make a bit code pool.
-        let mut bit_code_pool = BitCodePool::new(encoding_options);
-        for id in 0..(num_bit_codes as u64) {
-            let string = random_string(10);
-            bit_code_pool.add(&string, id);
-        }
-        // Test.
-        assert_eq!(bit_code_pool.num_bits(), num_bits);
-        assert_eq!(bit_code_pool.bit_codes.len(), num_bit_codes);
-    }
-
-    #[test]
     fn resolve_entities() {
         // Make a bit code pool.
         let mut bit_code_pool = BitCodePool::new(EncodingOptions::default());
@@ -224,5 +207,23 @@ mod tests {
         }
         // Number of resolved entities should equalnumber of bit codes in pool.
         assert_eq!(num_entities, bit_code_pool.len());
+    }
+
+    #[bench]
+    fn new_bit_code_pool(b: &mut Bencher) {
+        // Parameters.
+        let num_bit_codes: usize = 1_000;
+        let string_length = 10;
+        // Make a bit code pool.
+        b.iter(|| {
+            let encoding_options = EncodingOptions::default();
+            let mut bit_code_pool = BitCodePool::new(encoding_options);
+            for id in 0..(num_bit_codes as u64) {
+                let string = random_string(string_length);
+                bit_code_pool.add(&string, id);
+            }
+            // Test.
+            assert_eq!(bit_code_pool.bit_codes.len(), num_bit_codes);
+        });
     }
 }
